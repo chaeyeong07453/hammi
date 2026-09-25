@@ -112,7 +112,7 @@ p.lead { margin-bottom: 24px; }
 .section-heading .eyebrow { font-size: .7rem; margin-bottom: 5px; }
 .section-heading h2 { margin: 0; font-size: 1.4rem; }
 .section-aside { font-size: max(14px, .75rem); color: var(--muted); padding-bottom: 3px; }
-.course-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 17px; }
+.course-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 17px; }
 .course-card { display: flex; flex-direction: column; text-decoration: none; border: 1px solid var(--line); border-radius: 19px; background: var(--card); padding: 25px 24px 18px; transition: transform .2s, border-color .2s, box-shadow .2s; }
 .course-card.orchid { background: var(--orchid); border-color: var(--orchid); }
 .course-card.lilac { background: var(--lilac); border-color: var(--lilac); }

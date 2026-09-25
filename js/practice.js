@@ -1,4 +1,4 @@
-/* 연습 모드: 자리연습 / 낱말연습 / 짧은글연습 / 긴글연습 */
+/* 연습 모드: 낱말연습 / 짧은글연습 / 긴글연습 */
 (function () {
   const { $, el, shuffle, pick, esc, settings, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput } = App;
 
@@ -17,85 +17,8 @@
     app.appendChild(card);
   }
 
-  /* ================= 자리연습 ================= */
-  route('keys', (app, rest) => {
-    const stages = DATA.keyStages;
-    const stage = stages.find(s => s.id === rest[0]);
-    if (!stage) {
-      chooser(app, '⌨️ 자리연습', '글쇠 하나씩 눌러 보며 손가락 자리를 익혀요.', stages.map((s, i) => ({
-        href: '#/keys/' + s.id,
-        html: `<span class="n">${i + 1}단계 · ${s.name}</span><span class="d">${s.desc}</span><span class="jm">${s.jamos.join(' ')}</span>`
-      })));
-      return;
-    }
-
-    const TOTAL = 20;
-    const seq = Array.from({ length: TOTAL }, (_, i) => stage.jamos[i < stage.jamos.length ? i : Math.floor(Math.random() * stage.jamos.length)]);
-    // 앞부분은 순서대로, 뒷부분은 무작위
-    const queue = seq.slice(0, stage.jamos.length).concat(shuffle(seq.slice(stage.jamos.length)));
-    let idx = 0, correct = 0, wrong = 0, start = null, timer = null;
-
-    header(app, `⌨️ 자리연습 · ${stage.name}`, stage.desc, '단계 고르기');
-    $('.practice-head a', app).href = '#/keys';
-    const card = el('div', 'card');
-    card.appendChild(statsBar([['진행', 'prog', `0 / ${TOTAL}`], ['맞음', 'ok', 0], ['틀림', 'bad', 0], ['시간', 'time', '0분 0초']]));
-    card.innerHTML += `<div class="progress"><div id="pbar"></div></div>
-      <div class="target jamo" id="target"></div>
-      <div class="hint-bar" id="hint"></div>
-      <div id="kb"></div>
-      <p class="muted center" style="margin-top:12px">노란색으로 반짝이는 글쇠를 누르세요. 화면 자판의 파란색은 왼손, 주황색은 오른손 자리예요.</p>`;
-    app.appendChild(card);
-    const kb = Keyboard.render($('#kb', card));
-    kb.el.classList.toggle('hidden', !settings.data.keyboard);
-
-    function show() {
-      if (idx >= TOTAL) return finish();
-      const j = queue[idx];
-      $('#target').textContent = j;
-      paintHint($('#hint'), kb, Object.assign({ unit: j }, Hangul.keyFor(j)));
-      setStat('prog', `${idx} / ${TOTAL}`);
-      $('#pbar').style.width = (idx / TOTAL * 100) + '%';
-    }
-    function onKey(e) {
-      if (e.repeat || ['Tab', 'Escape'].includes(e.key) || e.target.closest('input, textarea, #settings') || (e.target.closest('button, a') && ['Enter', ' '].includes(e.key))) return;
-      if (['ShiftLeft', 'ShiftRight', 'CapsLock', 'AltLeft', 'AltRight', 'ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight', 'Lang1', 'Lang2', 'HangulMode'].includes(e.code) || e.key === 'HangulMode' || e.key === 'Shift') return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      e.preventDefault();
-      if (!start) { start = Date.now(); timer = setInterval(() => setStat('time', fmtTime(Date.now() - start)), 500); }
-      const j = Hangul.jamoFromEvent(e);
-      const target = queue[idx];
-      const info = Hangul.keyFor(target);
-      if (j === target) {
-        correct++; sound.ok(); kb.flash(info.code, true);
-        const msg = el('span', 'msg ok', '맞았어요!'); $('#hint').appendChild(msg);
-        idx++; setStat('ok', correct);
-        setTimeout(show, 200);
-      } else {
-        wrong++; sound.bad(); setStat('bad', wrong);
-        const k = Hangul.keyFor(j); if (k) kb.flash(k.code, false);
-        const old = $('#hint .msg'); if (old) old.remove();
-        $('#hint').appendChild(el('span', 'msg bad', j ? `'${j}'를 누르셨어요. 다시 해 봐요` : '다시 해 봐요'));
-      }
-    }
-    function finish() {
-      clearInterval(timer);
-      document.removeEventListener('keydown', onKey);
-      const acc = Math.round(correct / (correct + wrong) * 100);
-      const i = stages.indexOf(stage);
-      const next = stages[i + 1];
-      showResult(app, {
-        title: `${stage.name} 연습 끝!`,
-        cheer: DATA.cheer(acc),
-        stats: [['정확도', acc + '%'], ['틀린 횟수', wrong + '번'], ['걸린 시간', fmtTime(start ? Date.now() - start : 0)]],
-        onAgain: () => { location.reload(); },
-        backHref: next ? '#/keys/' + next.id : '#/keys',
-        backLabel: next ? `➡️ 다음 단계 (${next.name})` : '📋 단계 고르기'
-      });
-    }
-    document.addEventListener('keydown', onKey);
-    show();
-    return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
-  });
+  // 예전 주소(#/keys)로 들어오면 낱말연습으로 보냄
+  route('keys', () => { location.replace('#/words'); });
 
   /* ================= 낱말 / 짧은글 공용 ================= */
   function runTyping(app, opt) {

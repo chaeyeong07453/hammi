@@ -77,7 +77,7 @@
     const hash = location.hash.replace(/^#\/?/, '') || 'home';
     const [name, ...rest] = hash.split('/');
     const app = $('#app');
-    const group = ['keys', 'words', 'sentences', 'long', 'practice'].includes(name) ? 'practice' : ['rain', 'mole', 'games'].includes(name) ? 'games' : name;
+    const group = ['words', 'sentences', 'long', 'practice'].includes(name) ? 'practice' : ['rain', 'mole', 'games'].includes(name) ? 'games' : name;
     document.querySelectorAll('[data-nav]').forEach(link => {
       if (link.dataset.nav === group) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
@@ -199,7 +199,6 @@
 
   /* ---------- 홈과 연습 둘러보기 ---------- */
   const courses = [
-    { route: 'keys', name: '자리연습', desc: '손가락을 어디에 둘까요?<br> 글쇠 하나부터 차근차근.', icon: 'keyboard', tone: 'orchid', detail: '자판과 친해지기' },
     { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br> 익숙한 낱말로 가볍게.', icon: 'type', tone: 'lilac', detail: '낱말 15개씩' },
     { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br> 한 줄씩 따라 써요.', icon: 'lines', tone: 'sky', detail: '문장 10개씩' },
     { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br> 타자의 즐거움을 길게.', icon: 'book', tone: 'mint', detail: '내 글로도 연습 가능' }
@@ -240,7 +239,7 @@
           <span class="hero-eyebrow"><span class="status-dot"></span> 천천히, 즐겁게. 나의 속도로.</span>
           <h1 id="hero-title">오늘도,<br><span>한 글자 더.</span></h1>
           <p class="hero-description">${u ? `<b>${esc(u.id)}님, 반가워요.</b><br>오늘도 나를 위한 작은 배움을 시작해요.` : '한 글자씩 익숙해지는 즐거움.<br>부담 없이 시작하는 나만의 타자 시간.'}</p>
-          <div class="hero-actions"><a class="btn hero-cta" href="#/keys">타자연습 시작하기 ${icon('arrow')}</a><a class="text-link" href="#/guide">처음 오셨나요?</a></div>
+          <div class="hero-actions"><a class="btn hero-cta" href="#/words">타자연습 시작하기 ${icon('arrow')}</a><a class="text-link" href="#/guide">처음 오셨나요?</a></div>
           <p class="hero-note">${icon('check')} ${u ? `지금까지 ${u.count || 0}번의 연습을 함께했어요` : '가입 없이도 바로 연습할 수 있어요'}</p>
         </div>
         <div class="hero-visual">
@@ -249,7 +248,7 @@
           <div class="hero-sticker"><span class="sticker-icon">${icon('leaf')}</span><span>잘하는 것보다 중요한 건,<br><strong>오늘도 해보는 마음.</strong></span></div>
         </div>
       </section>
-      <div class="welcome-strip"><span class="welcome-icon">${icon('keyboard')}</span><p><strong>처음이어도 괜찮아요.</strong><span> 자리연습부터 한 걸음씩 함께해요.</span></p><a href="#/keys">첫 연습 시작 ${icon('arrow')}</a></div>
+      <div class="welcome-strip"><span class="welcome-icon">${icon('keyboard')}</span><p><strong>처음이어도 괜찮아요.</strong><span> 낱말연습부터 한 걸음씩 함께해요.</span></p><a href="#/words">첫 연습 시작 ${icon('arrow')}</a></div>
       <section class="home-section" aria-labelledby="practice-title">
         <div class="section-heading"><div><span class="eyebrow">기초부터 차근차근</span><h2 id="practice-title">어디부터 시작할까요?</h2></div><span class="section-aside">내게 맞는 연습을 골라 보세요.</span></div>
         ${courseCards()}
@@ -266,7 +265,7 @@
       <details class="home-guide"><summary><span>${icon('bulb')} 시작 전, 이것만 알아두세요</span><span class="guide-plus" aria-hidden="true">+</span></summary>${guideContent()}</details>`;
   });
   route('practice', app => {
-    header(app, '어디부터 시작할까요?', '처음이라면 자리연습부터. 익숙해졌다면 원하는 연습을 골라 보세요.');
+    header(app, '어디부터 시작할까요?', '처음이라면 낱말연습부터. 익숙해졌다면 원하는 연습을 골라 보세요.');
     app.insertAdjacentHTML('beforeend', courseCards());
   });
   route('games', app => {
@@ -275,7 +274,7 @@
   });
   route('guide', app => {
     header(app, '시작은 가볍게, 내 속도로.', '키보드가 처음이어도 괜찮아요. 하나씩 함께 익혀 봐요.');
-    app.insertAdjacentHTML('beforeend', `<div class="card guide-page">${guideContent()}<div class="btn-row"><a class="btn big" href="#/keys">자리연습 시작하기 ${icon('arrow')}</a></div><p class="muted center">실제 키보드가 있는 컴퓨터에서 연습하면 더 편해요.</p></div>`);
+    app.insertAdjacentHTML('beforeend', `<div class="card guide-page">${guideContent()}<div class="btn-row"><a class="btn big" href="#/words">낱말연습 시작하기 ${icon('arrow')}</a></div><p class="muted center">실제 키보드가 있는 컴퓨터에서 연습하면 더 편해요.</p></div>`);
   });
 
   /* ---------- 설정 패널 ---------- */
