@@ -214,11 +214,69 @@
   });
 
   /* ================= 긴글연습 ================= */
+  /* 내 글 저장소 (localStorage) */
+  const myTexts = {
+    key: 'hammi.mytexts',
+    all() { try { return JSON.parse(localStorage.getItem(this.key) || '[]'); } catch (e) { return []; } },
+    save(list) { localStorage.setItem(this.key, JSON.stringify(list)); },
+    add(title, author, body) {
+      const lines = body.replace(/\r/g, '').split('\n').map(l => l.replace(/\s+$/g, '').replace(/\t/g, ' '));
+      while (lines.length && !lines[lines.length - 1]) lines.pop();
+      while (lines.length && !lines[0]) lines.shift();
+      const t = { id: 'my' + Date.now().toString(36), title: title.trim() || '내 글', author: author.trim(), lines, custom: true };
+      const list = this.all(); list.unshift(t); this.save(list); return t;
+    },
+    remove(id) { this.save(this.all().filter(t => t.id !== id)); }
+  };
+
+  // 내 글 입력 화면
+  function customEditor(app) {
+    header(app, '✏️ 내 글로 연습하기', '좋아하는 노래 가사나 시를 넣어 두고 연습해요.', '글 고르기');
+    $('.practice-head a', app).href = '#/long';
+    const card = el('div', 'card');
+    card.innerHTML = `
+      <div class="form-row"><label for="my-title">제목</label><input class="text-input" id="my-title" type="text" maxlength="40" placeholder="예) 고향의 봄"></div>
+      <div class="form-row"><label for="my-author">지은이 (없어도 돼요)</label><input class="text-input" id="my-author" type="text" maxlength="30" placeholder="예) 이원수"></div>
+      <div class="form-row"><label for="my-body">내용</label><textarea class="text-input" id="my-body" rows="10" placeholder="여기에 가사나 시를 붙여 넣으세요.\n한 줄씩 따라 치게 됩니다. 빈 줄은 그대로 두어도 괜찮아요."></textarea></div>
+      <p class="muted" id="my-count">0줄</p>
+      <div class="btn-row"><button class="btn big" id="my-save">💾 저장하고 연습 시작</button><a class="btn big secondary" href="#/long">취소</a></div>
+      <div class="tips">💡 붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. 저장한 글은 이 컴퓨터에 남아 있어서 다음에도 바로 연습할 수 있어요.</div>`;
+    app.appendChild(card);
+    const body = $('#my-body');
+    body.addEventListener('input', () => { $('#my-count').textContent = body.value.split('\n').filter(l => l.trim()).length + '줄'; });
+    $('#my-save').onclick = () => {
+      if (!body.value.trim()) { body.focus(); body.classList.add('bad'); setTimeout(() => body.classList.remove('bad'), 800); return; }
+      const t = myTexts.add($('#my-title').value, $('#my-author').value, body.value);
+      location.hash = '#/long/' + t.id;
+    };
+    $('#my-title').focus();
+  }
+
   route('long', (app, rest) => {
-    const text = DATA.longTexts.find(t => t.id === rest[0]);
+    if (rest[0] === 'new') return customEditor(app);
+    const text = DATA.longTexts.find(t => t.id === rest[0]) || myTexts.all().find(t => t.id === rest[0]);
     if (!text) {
-      chooser(app, '📖 긴글연습', '시와 이야기를 한 줄씩 따라 쳐요. 한 줄을 다 치면 다음 줄로 넘어가요.',
-        DATA.longTexts.map(t => ({ cls: 'text-btn', href: '#/long/' + t.id, html: `<span class="t">${t.title}</span> <span class="a">${t.author}</span><span class="preview">${esc(t.lines.find(l => l))}</span>` })), 'text-list');
+      const mine = myTexts.all();
+      const item = t => ({ cls: 'text-btn', href: '#/long/' + t.id, html: `<span class="t">${esc(t.title)}</span> <span class="a">${esc(t.author)}</span><span class="preview">${esc(t.lines.find(l => l) || '')}</span>` });
+      header(app, '📖 긴글연습', '시와 이야기를 한 줄씩 따라 쳐요. 한 줄을 다 치면 다음 줄로 넘어가요.');
+      const my = el('div', 'card');
+      my.innerHTML = `<h2>✏️ 내 글</h2><p class="lead">좋아하는 노래 가사나 시를 직접 넣어 연습할 수 있어요.</p><div class="text-list" id="my-list"></div>`;
+      const ml = $('#my-list', my);
+      const nb = el('button', 'text-btn new', `<span class="t">＋ 새 글 넣기</span><span class="preview">가사, 시, 편지… 무엇이든 좋아요</span>`);
+      nb.onclick = () => { location.hash = '#/long/new'; };
+      ml.appendChild(nb);
+      mine.forEach(t => {
+        const o = item(t); const b = el('button', o.cls); b.innerHTML = o.html; b.onclick = () => { location.hash = o.href; };
+        const del = el('span', 'del', '🗑 지우기'); del.title = '이 글 지우기';
+        del.onclick = ev => { ev.stopPropagation(); if (confirm(`「${t.title}」을(를) 지울까요?`)) { myTexts.remove(t.id); b.remove(); } };
+        b.appendChild(del); ml.appendChild(b);
+      });
+      app.appendChild(my);
+      const card = el('div', 'card');
+      card.innerHTML = `<h2>📚 준비된 글</h2><div class="text-list"></div>`;
+      const list = card.querySelector('.text-list');
+      DATA.longTexts.forEach(t => { const o = item(t); const b = el('button', o.cls); b.innerHTML = o.html; b.onclick = () => { location.hash = o.href; }; list.appendChild(b); });
+      app.appendChild(card);
       return;
     }
     const lines = text.lines;
@@ -226,7 +284,7 @@
     const stats = makeStats();
     let pos = 0, locked = false, timer = null;
 
-    header(app, `📖 ${text.title}`, text.author ? text.author : '', '글 고르기');
+    header(app, `📖 ${esc(text.title)}`, text.author ? esc(text.author) : '', '글 고르기');
     $('.practice-head a', app).href = '#/long';
     const card = el('div', 'card');
     card.appendChild(statsBar([['진행', 'prog', `1 / ${typeIdx.length}줄`], ['타수 (타/분)', 'spm', 0], ['정확도', 'acc', '100%'], ['시간', 'time', '0분 0초']]));
@@ -289,7 +347,7 @@
       clearInterval(timer);
       const spm = stats.spm(), acc = stats.acc();
       showResult(app, {
-        title: `「${text.title}」 다 쳤어요!`,
+        title: `「${esc(text.title)}」 다 쳤어요!`,
         cheer: DATA.cheer(acc),
         stats: [['타수', spm + '타/분'], ['정확도', acc + '%'], ['걸린 시간', fmtTime(stats.elapsed())]],
         recordKey: acc >= 80 ? 'long' : null, recordVal: spm,
