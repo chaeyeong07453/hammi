@@ -1,6 +1,6 @@
 /* 연습 모드: 낱말연습 / 짧은글연습 / 긴글연습 */
 (function () {
-  const { $, el, shuffle, pick, esc, settings, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput } = App;
+  const { routes, $, el, shuffle, pick, esc, settings, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput } = App;
 
   // 하위 메뉴 선택 화면
   function chooser(app, title, lead, options, cls) {
@@ -152,6 +152,41 @@
     remove(id) { this.save(this.all().filter(t => t.id !== id)); }
   };
 
+  /* 함께 보는 글: GitHub 저장소의 이슈(라벨 text)를 공유 저장소로 사용 */
+  const sharedTexts = {
+    repo: 'chaeyeong07453/hammi', label: 'text', cacheKey: 'hammi.shared', ttl: 5 * 60 * 1000,
+    parse(issue) {
+      const raw = (issue.body || '').replace(/\r/g, '');
+      let author = '';
+      let lines = raw.split('\n').map(l => l.replace(/\s+$/g, '').replace(/\t/g, ' '));
+      if (lines[0] && /^(지은이|작가|가수|작사)\s*[:：]/.test(lines[0])) { author = lines[0].split(/[:：]/).slice(1).join(':').trim(); lines.shift(); }
+      while (lines.length && !lines[0]) lines.shift();
+      while (lines.length && !lines[lines.length - 1]) lines.pop();
+      return { id: 's' + issue.number, number: issue.number, title: issue.title.trim() || '제목 없음', author, lines, shared: true, by: issue.user && issue.user.login, url: issue.html_url };
+    },
+    cached() { try { return JSON.parse(localStorage.getItem(this.cacheKey)); } catch (e) { return null; } },
+    async load(force) {
+      const c = this.cached();
+      if (!force && c && Date.now() - c.at < this.ttl) return c.list;
+      const res = await fetch(`https://api.github.com/repos/${this.repo}/issues?labels=${this.label}&state=open&per_page=100`, { headers: { Accept: 'application/vnd.github+json' } });
+      if (!res.ok) { if (c) return c.list; throw new Error('load failed ' + res.status); }
+      const list = (await res.json()).filter(i => !i.pull_request).map(i => this.parse(i)).filter(t => t.lines.some(l => l));
+      localStorage.setItem(this.cacheKey, JSON.stringify({ at: Date.now(), list }));
+      return list;
+    },
+    async find(id) {
+      const c = this.cached();
+      const hit = c && c.list.find(t => t.id === id);
+      if (hit) return hit;
+      return (await this.load(true)).find(t => t.id === id) || null;
+    },
+    // GitHub 새 이슈 작성 페이지 주소 (제목·내용·라벨이 채워진 채로 열림)
+    newUrl(title, author, body) {
+      const b = (author.trim() ? `지은이: ${author.trim()}\n\n` : '') + body.replace(/\r/g, '');
+      return `https://github.com/${this.repo}/issues/new?labels=${this.label}&title=${encodeURIComponent(title.trim() || '제목 없음')}&body=${encodeURIComponent(b)}`;
+    }
+  };
+
   // 내 글 입력 화면
   function customEditor(app) {
     header(app, '내 글로 연습하기', '좋아하는 노래 가사나 시를 넣어 두고 연습해요.', '글 고르기');
@@ -162,8 +197,8 @@
       <div class="form-row"><label for="my-author">지은이 (없어도 돼요)</label><input class="text-input" id="my-author" type="text" maxlength="30" placeholder="예) 이원수"></div>
       <div class="form-row"><label for="my-body">내용</label><textarea class="text-input" id="my-body" rows="10" placeholder="여기에 가사나 시를 붙여 넣으세요.\n한 줄씩 따라 치게 됩니다. 빈 줄은 그대로 두어도 괜찮아요."></textarea></div>
       <p class="muted" id="my-count">0줄</p>
-      <div class="btn-row"><button class="btn big" id="my-save">저장하고 연습 시작</button><a class="btn big secondary" href="#/long">취소</a></div>
-      <div class="tips">붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. 저장한 글은 이 컴퓨터에 남아 있어서 다음에도 바로 연습할 수 있어요.</div>`;
+      <div class="btn-row"><button class="btn big" id="my-save">저장하고 연습 시작</button><button class="btn big accent" id="my-share">모두에게 공유하기</button><a class="btn big secondary" href="#/long">취소</a></div>
+      <div class="tips">붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. <b>저장</b>은 이 컴퓨터에만 남고, <b>모두에게 공유하기</b>는 GitHub 글쓰기 창이 열려요. 거기서 초록색 <b>Submit new issue</b> 단추를 누르면 잠시 뒤 모든 사람의 긴글연습 목록에 나타나요. (GitHub 로그인이 필요해요)</div>`;
     app.appendChild(card);
     const body = $('#my-body');
     body.addEventListener('input', () => { $('#my-count').textContent = body.value.split('\n').filter(l => l.trim()).length + '줄'; });
@@ -172,12 +207,25 @@
       const t = myTexts.add($('#my-title').value, $('#my-author').value, body.value);
       location.hash = '#/long/' + t.id;
     };
+    $('#my-share').onclick = () => {
+      if (!body.value.trim()) { body.focus(); body.classList.add('bad'); setTimeout(() => body.classList.remove('bad'), 800); return; }
+      window.open(sharedTexts.newUrl($('#my-title').value, $('#my-author').value, body.value), '_blank', 'noopener');
+    };
     $('#my-title').focus();
   }
 
   route('long', (app, rest) => {
     if (rest[0] === 'new') return customEditor(app);
-    const text = DATA.longTexts.find(t => t.id === rest[0]) || myTexts.all().find(t => t.id === rest[0]);
+    // 공유 글은 불러온 뒤 같은 화면을 다시 그림
+    if (/^s\d+$/.test(rest[0] || '') && !(sharedTexts.cached() || { list: [] }).list.some(t => t.id === rest[0])) {
+      header(app, '📖 긴글연습', '', '글 고르기'); $('.practice-head a', app).href = '#/long';
+      app.insertAdjacentHTML('beforeend', '<div class="card center muted" id="loading">글을 불러오는 중이에요…</div>');
+      let alive = true;
+      sharedTexts.find(rest[0]).then(t => { if (!alive) return; if (t) { app.innerHTML = ''; routes.long(app, rest); } else $('#loading').textContent = '이 글을 찾을 수 없어요. 지워졌을 수 있어요.'; })
+        .catch(() => { if (alive) $('#loading').textContent = '인터넷 연결을 확인해 주세요.'; });
+      return () => { alive = false; };
+    }
+    const text = DATA.longTexts.find(t => t.id === rest[0]) || myTexts.all().find(t => t.id === rest[0]) || (sharedTexts.cached() || { list: [] }).list.find(t => t.id === rest[0]);
     if (!text) {
       const mine = myTexts.all();
       const item = t => ({ cls: 'text-btn', href: '#/long/' + t.id, html: `<span class="t">${esc(t.title)}</span> <span class="a">${esc(t.author)}</span><span class="preview">${esc(t.lines.find(l => l) || '')}</span>` });
@@ -195,12 +243,23 @@
         b.appendChild(del); ml.appendChild(b);
       });
       app.appendChild(my);
+      // 함께 보는 글
+      const sh = el('div', 'card');
+      sh.innerHTML = `<h2>함께 보는 글</h2><p class="lead">누군가 공유한 글이에요. 인터넷이 연결되어 있으면 모두 같은 목록을 봐요.</p><div class="text-list" id="shared-list"><div class="muted">불러오는 중…</div></div>`;
+      app.appendChild(sh);
+      let alive = true;
+      sharedTexts.load().then(list => {
+        if (!alive) return;
+        const sl = $('#shared-list', sh); sl.innerHTML = '';
+        if (!list.length) { sl.innerHTML = '<div class="muted">아직 공유된 글이 없어요. 새 글 넣기에서 <b>모두에게 공유하기</b>를 눌러 보세요.</div>'; return; }
+        list.forEach(t => { const o = item(t); const b = el('button', o.cls + ' shared'); b.innerHTML = o.html; b.onclick = () => { location.hash = o.href; }; sl.appendChild(b); });
+      }).catch(() => { if (alive) $('#shared-list', sh).innerHTML = '<div class="muted">지금은 불러올 수 없어요. 인터넷 연결을 확인해 주세요.</div>'; });
       const card = el('div', 'card');
       card.innerHTML = `<h2>준비된 글</h2><div class="text-list"></div>`;
       const list = card.querySelector('.text-list');
       DATA.longTexts.forEach(t => { const o = item(t); const b = el('button', o.cls); b.innerHTML = o.html; b.onclick = () => { location.hash = o.href; }; list.appendChild(b); });
       app.appendChild(card);
-      return;
+      return () => { alive = false; };
     }
     const lines = text.lines;
     const typeIdx = lines.map((l, i) => l ? i : -1).filter(i => i >= 0);

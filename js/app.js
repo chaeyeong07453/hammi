@@ -324,7 +324,7 @@
     });
   }
 
-  global.App = { $, el, shuffle, pick, esc, settings, records, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput };
+  global.App = { routes, $, el, shuffle, pick, esc, settings, records, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput };
 
   document.addEventListener('DOMContentLoaded', () => {
     settings.load(); initSettings(); navigate();

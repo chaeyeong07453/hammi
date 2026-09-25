@@ -280,3 +280,7 @@ html:not([data-size="normal"]) .game-grid { grid-template-columns: 1fr; }
   html:not([data-size="normal"]) .course-grid { grid-template-columns: 1fr; }html:not([data-size="normal"]) .hero h1 { font-size: 2.35rem; }html:not([data-size="normal"]) .main-nav { gap: 12px; justify-content: space-between; }html:not([data-size="normal"]) .main-nav a { font-size: .62rem; }html:not([data-size="normal"]) .brand { font-size: .85rem; }html:not([data-size="normal"]) .game-copy { max-width: 100%; }html:not([data-size="normal"]) .rain-art, html:not([data-size="normal"]) .mole-art { opacity: .18; }html:not([data-size="normal"]) .game-card { min-height: 290px; }html:not([data-size="normal"]) .record-unit { display: block; margin-left: 0; }html:not([data-size="normal"]) .course-card p br { display: block; }html:not([data-size="normal"]) .hero-visual { min-height: 290px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* 함께 보는 글 */
+.text-btn.shared { border-color: #cdb8f0; background: #faf6ff; }
+.text-btn.shared:hover { border-color: var(--primary); }
