@@ -113,7 +113,7 @@
       <div class="mole-area" id="area">
         <div class="mole-grid">${Array.from({ length: 9 }, (_, i) => `<div class="hole" data-i="${i}"><div class="mole"></div></div>`).join('')}</div>
       </div>
-      <p class="muted center" style="margin-top:12px">이 놀이는 글자를 입력하는 칸이 없어요. 자판만 누르면 돼요. (한글/영어 어느 쪽이든 괜찮아요)</p>`;
+      <p class="muted center" style="margin-top:12px">이 게임은 글자를 입력하는 칸이 없어요. 자판만 누르면 돼요. (한글/영어 어느 쪽이든 괜찮아요)</p>`;
     app.appendChild(card);
     const area = $('#area');
     const holes = [...card.querySelectorAll('.hole')];

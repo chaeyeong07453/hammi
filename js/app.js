@@ -178,7 +178,7 @@
     const w = best('word'), s = best('sentence'), l = best('long'), r = best('rain'), m = best('mole');
     app.innerHTML = `
       <div class="hero">
-        <h1>👵👴 할미할비 타자교실</h1>
+        <h1>👵👴 함미합삐 타자연습</h1>
         <p class="lead">천천히, 즐겁게, 매일 조금씩. 자판과 친해지는 연습장입니다.</p>
       </div>
       <div class="menu-grid">
@@ -186,8 +186,8 @@
         <a class="menu-card" href="#/words"><span class="icon">🍎</span><span class="title">2단계 · 낱말연습</span><span class="desc">일상에서 쓰는 쉬운 낱말을 쳐 봐요</span></a>
         <a class="menu-card" href="#/sentences"><span class="icon">📝</span><span class="title">3단계 · 짧은글연습</span><span class="desc">속담과 일상 문장을 한 줄씩</span></a>
         <a class="menu-card" href="#/long"><span class="icon">📖</span><span class="title">4단계 · 긴글연습</span><span class="desc">시와 이야기를 한 줄 한 줄 따라 쳐요</span></a>
-        <a class="menu-card game" href="#/rain"><span class="icon">🌧️</span><span class="title">놀이 · 낱말비</span><span class="desc">떨어지는 낱말을 바닥에 닿기 전에!</span></a>
-        <a class="menu-card game" href="#/mole"><span class="icon">🐹</span><span class="title">놀이 · 글쇠 두더지</span><span class="desc">두더지가 든 글쇠를 재빨리 눌러요</span></a>
+        <a class="menu-card game" href="#/rain"><span class="icon">🌧️</span><span class="title">게임 · 낱말비</span><span class="desc">떨어지는 낱말을 바닥에 닿기 전에!</span></a>
+        <a class="menu-card game" href="#/mole"><span class="icon">🐹</span><span class="title">게임 · 글쇠 두더지</span><span class="desc">두더지가 든 글쇠를 재빨리 눌러요</span></a>
       </div>
       <div class="card">
         <h2>🏆 나의 최고 기록</h2>
