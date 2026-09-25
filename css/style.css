@@ -289,3 +289,7 @@ html:not([data-size="normal"]) .game-grid { grid-template-columns: 1fr; }
 .mole.word { font-size: 1.45rem; letter-spacing: 0; white-space: nowrap; padding: 0 6px; }
 .rain-word { font-size: 1.15rem; max-width: 92%; }
 @media (max-width: 720px) { .mole.word { font-size: 1.05rem; } .rain-word { font-size: .95rem; padding: 4px 10px; } }
+
+/* 게임 멈춤/그만하기 */
+.game-ctrl { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 720px) { .game-ctrl { width: 100%; justify-content: flex-end; } }

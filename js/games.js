@@ -36,19 +36,23 @@
     card.innerHTML = `
       <div class="game-hud">
         <div class="stat"><div class="label">점수</div><div class="val" id="score">0</div></div>
+        <div class="stat"><div class="label">남은 시간</div><div class="val" id="time">90초</div></div>
         <div class="lives" id="lives"></div>
         <div class="stat"><div class="label">놓친 글</div><div class="val" id="missed">0</div></div>
+        <div class="game-ctrl"><button class="btn sm secondary" id="btn-pause" disabled>⏸ 잠깐 멈춤</button><button class="btn sm ghost" id="btn-quit" disabled>⏹ 그만하기</button></div>
       </div>
       <div class="game-area" id="area"><div class="ground"></div></div>
-      <input class="type-input" id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="띄어쓰기까지 똑같이 치세요 (다 치면 자동)" style="margin-top:12px" disabled>`;
+      <input class="type-input" id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="띄어쓰기까지 똑같이 치세요 (다 치면 자동)" style="margin-top:12px" disabled>
+      <p class="muted center" style="margin-top:8px">90초가 지나거나 5개를 놓치면 끝나요. 멈추고 싶으면 <b>잠깐 멈춤</b>(Esc 키), 결과를 보려면 <b>그만하기</b>.</p>`;
     app.appendChild(card);
     const area = $('#area'), input = $('#inp');
+    const DURATION = 90;
     const PARAMS = {
       slow: { fall: 24000, spawn: 5000, max: 4, pool: DATA.gamePhrases.filter(t => t.length <= 7) },
       normal: { fall: 17000, spawn: 4000, max: 5, pool: DATA.gamePhrases.filter(t => t.length <= 12) },
       fast: { fall: 12000, spawn: 3200, max: 5, pool: DATA.gamePhrases }
     };
-    let words = [], lives = 5, score = 0, missed = 0, raf = null, spawnTimer = null, last = 0, running = false, p, seen = new Set();
+    let words = [], lives = 5, score = 0, missed = 0, raf = null, spawnTimer = null, clock = null, last = 0, running = false, paused = false, timeLeft = DURATION, p, seen = new Set();
 
     const drawLives = () => { $('#lives').textContent = '❤️'.repeat(lives) + '🤍'.repeat(5 - lives); };
     drawLives();
@@ -77,7 +81,7 @@
         if (w.y > limit * 0.68) w.el.classList.add('danger');
         if (w.y + w.el.offsetHeight >= limit) {
           w.el.remove(); missed++; lives--; drawLives(); $('#missed').textContent = missed; sound.bad();
-          if (lives <= 0) end();
+          if (lives <= 0) end('lives');
           return false;
         }
         return true;
@@ -96,19 +100,43 @@
         resetInput(input);
       } else if (force) { sound.tick(); resetInput(input); }
     }
+    function tick() { timeLeft--; $('#time').textContent = timeLeft + '초'; if (timeLeft <= 5 && timeLeft > 0) sound.tick(); if (timeLeft <= 0) end('time'); }
+    function run() { last = 0; spawnTimer = setInterval(spawn, p.spawn); clock = setInterval(tick, 1000); raf = requestAnimationFrame(loop); }
+    function halt() { cancelAnimationFrame(raf); clearInterval(spawnTimer); clearInterval(clock); }
     function start(level) {
       p = PARAMS[level]; running = true; input.disabled = false; input.focus();
-      spawn(); spawnTimer = setInterval(spawn, p.spawn); raf = requestAnimationFrame(loop);
+      $('#btn-pause').disabled = false; $('#btn-quit').disabled = false;
+      spawn(); run();
     }
-    function end() {
-      running = false; cancelAnimationFrame(raf); clearInterval(spawnTimer);
-      input.disabled = true; sound.lose();
-      gameOver(area, { title: '낱말비 끝!', score, recordKey: 'rain', detail: `글 ${score}개를 없앴어요.` });
+    function pause() {
+      if (!running || paused) return;
+      paused = true; running = false; halt(); input.disabled = true;
+      $('#btn-pause').textContent = '▶ 계속하기';
+      const ov = el('div', 'overlay', `<h2>잠깐 멈춤</h2><p class="muted" style="margin:0">쉬었다가 준비되면 계속하세요.</p><div class="btn-row"><button class="btn big" id="btn-resume">▶ 계속하기</button><button class="btn big secondary" id="btn-quit2">⏹ 그만하기</button></div>`);
+      ov.id = 'pause-ov'; area.appendChild(ov);
+      $('#btn-resume').onclick = resume; $('#btn-quit2').onclick = () => { resume(); end('quit'); };
+      $('#btn-resume').focus();
+    }
+    function resume() {
+      if (!paused) return;
+      paused = false; running = true; const ov = $('#pause-ov'); if (ov) ov.remove();
+      $('#btn-pause').textContent = '⏸ 잠깐 멈춤'; input.disabled = false; input.focus(); run();
+    }
+    function end(why) {
+      running = false; paused = false; halt();
+      input.disabled = true; $('#btn-pause').disabled = true; $('#btn-quit').disabled = true;
+      why === 'lives' ? sound.lose() : sound.win();
+      const title = why === 'lives' ? '아이고, 5개를 놓쳤어요' : why === 'quit' ? '여기까지 했어요' : '90초 끝!';
+      gameOver(area, { title, score, recordKey: 'rain', detail: `글 ${score}개를 없앴어요. (놓침 ${missed}개)` });
     }
     input.addEventListener('input', () => tryMatch(false));
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tryMatch(true); } });
-    levelPicker(area, '낱말비', '느리게: 짧은 구절 · 보통: 조금 긴 구절 · 빠르게: 속담과 문장. 5개를 놓치면 끝나요.', start);
-    return () => { running = false; cancelAnimationFrame(raf); clearInterval(spawnTimer); };
+    $('#btn-pause').onclick = () => paused ? resume() : pause();
+    $('#btn-quit').onclick = () => { if (running || paused) { if (paused) resume(); end('quit'); } };
+    const onEsc = e => { if (e.key === 'Escape' && (running || paused)) { e.preventDefault(); paused ? resume() : pause(); } };
+    document.addEventListener('keydown', onEsc);
+    levelPicker(area, '낱말비', '느리게: 짧은 구절 · 보통: 조금 긴 구절 · 빠르게: 속담과 문장. 90초 동안, 5개를 놓치면 끝나요.', start);
+    return () => { running = false; halt(); document.removeEventListener('keydown', onEsc); };
   });
 
   /* ================= 낱말 두더지 ================= */
@@ -120,6 +148,7 @@
         <div class="stat"><div class="label">점수</div><div class="val" id="score">0</div></div>
         <div class="stat"><div class="label">남은 시간</div><div class="val" id="time">45초</div></div>
         <div class="stat"><div class="label">놓침</div><div class="val" id="missed">0</div></div>
+        <div class="game-ctrl"><button class="btn sm secondary" id="btn-pause" disabled>⏸ 잠깐 멈춤</button><button class="btn sm ghost" id="btn-quit" disabled>⏹ 그만하기</button></div>
       </div>
       <div class="mole-area" id="area">
         <div class="mole-grid">${Array.from({ length: 9 }, (_, i) => `<div class="hole" data-i="${i}"><div class="mole word"></div></div>`).join('')}</div>
@@ -134,7 +163,7 @@
       fast: { interval: 1500, stay: 3800, pool: DATA.gameWords }
     };
     const DURATION = 45;
-    let running = false, score = 0, missed = 0, timeLeft = DURATION, popTimer = null, clock = null, level = 'normal', active = new Map(); // holeIdx -> {word, hideTimer}
+    let running = false, paused = false, score = 0, missed = 0, timeLeft = DURATION, popTimer = null, clock = null, level = 'normal', active = new Map(); // holeIdx -> {word, hideTimer}
 
     function hide(i, hit) {
       const a = active.get(i); if (!a) return;
@@ -163,20 +192,44 @@
       if (hit) { score++; $('#score').textContent = score; sound.ok(); hide(hit[0], true); resetInput(input); }
       else if (force) { sound.bad(); active.forEach((_, i) => { holes[i].classList.add('wrong'); setTimeout(() => holes[i].classList.remove('wrong'), 260); }); resetInput(input); }
     }
+    function run() {
+      popTimer = setInterval(pop, SETS[level].interval);
+      clock = setInterval(() => { timeLeft--; $('#time').textContent = timeLeft + '초'; if (timeLeft <= 5 && timeLeft > 0) sound.tick(); if (timeLeft <= 0) end('time'); }, 1000);
+    }
+    function halt() { clearInterval(popTimer); clearInterval(clock); }
+    function clearMoles() { active.forEach((a, i) => { clearTimeout(a.hideTimer); holes[i].classList.remove('up'); }); active.clear(); }
     function start(l) {
       level = l; running = true; timeLeft = DURATION; input.disabled = false; input.focus();
-      pop(); popTimer = setInterval(pop, SETS[level].interval);
-      clock = setInterval(() => { timeLeft--; $('#time').textContent = timeLeft + '초'; if (timeLeft <= 5 && timeLeft > 0) sound.tick(); if (timeLeft <= 0) end(); }, 1000);
+      $('#btn-pause').disabled = false; $('#btn-quit').disabled = false;
+      pop(); run();
     }
-    function end() {
-      running = false; clearInterval(popTimer); clearInterval(clock); input.disabled = true;
-      active.forEach((a, i) => { clearTimeout(a.hideTimer); holes[i].classList.remove('up'); }); active.clear();
+    function pause() {
+      if (!running || paused) return;
+      paused = true; running = false; halt(); clearMoles(); input.disabled = true;
+      $('#btn-pause').textContent = '▶ 계속하기';
+      const ov = el('div', 'overlay', `<h2>잠깐 멈춤</h2><p class="muted" style="margin:0">쉬었다가 준비되면 계속하세요.</p><div class="btn-row"><button class="btn big" id="btn-resume">▶ 계속하기</button><button class="btn big secondary" id="btn-quit2">⏹ 그만하기</button></div>`);
+      ov.id = 'pause-ov'; area.appendChild(ov);
+      $('#btn-resume').onclick = resume; $('#btn-quit2').onclick = () => { resume(); end('quit'); };
+      $('#btn-resume').focus();
+    }
+    function resume() {
+      if (!paused) return;
+      paused = false; running = true; const ov = $('#pause-ov'); if (ov) ov.remove();
+      $('#btn-pause').textContent = '⏸ 잠깐 멈춤'; input.disabled = false; input.focus(); pop(); run();
+    }
+    function end(why) {
+      running = false; paused = false; halt(); input.disabled = true; clearMoles();
+      $('#btn-pause').disabled = true; $('#btn-quit').disabled = true;
       sound.win();
-      gameOver(area, { title: '두더지 잡기 끝!', score, recordKey: 'mole', detail: `두더지 ${score}마리를 잡았어요. (놓침 ${missed}마리)` });
+      gameOver(area, { title: why === 'quit' ? '여기까지 했어요' : '두더지 잡기 끝!', score, recordKey: 'mole', detail: `두더지 ${score}마리를 잡았어요. (놓침 ${missed}마리)` });
     }
     input.addEventListener('input', () => tryMatch(false));
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tryMatch(true); } });
-    levelPicker(area, '낱말 두더지', '느리게: 한두 글자 낱말 · 보통: 세 글자까지 · 빠르게: 모든 낱말', start);
-    return () => { running = false; clearInterval(popTimer); clearInterval(clock); active.forEach(a => clearTimeout(a.hideTimer)); };
+    $('#btn-pause').onclick = () => paused ? resume() : pause();
+    $('#btn-quit').onclick = () => { if (running || paused) { if (paused) resume(); end('quit'); } };
+    const onEsc = e => { if (e.key === 'Escape' && (running || paused)) { e.preventDefault(); paused ? resume() : pause(); } };
+    document.addEventListener('keydown', onEsc);
+    levelPicker(area, '낱말 두더지', '느리게: 한두 글자 낱말 · 보통: 세 글자까지 · 빠르게: 모든 낱말. 45초 동안이에요.', start);
+    return () => { running = false; halt(); document.removeEventListener('keydown', onEsc); active.forEach(a => clearTimeout(a.hideTimer)); };
   });
 })();
