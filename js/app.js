@@ -214,12 +214,12 @@
   function gameCards() {
     return `<div class="game-grid">
       <a class="game-card rain-card" href="#/rain">
-        <div class="game-copy"><span class="eyebrow">낱말을 톡톡</span><h3>낱말비</h3><p>하늘에서 내려오는 낱말을<br>사라지기 전에 쳐 보세요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
-        <div class="rain-art" aria-hidden="true"><span class="rain-stroke one"></span><span class="rain-stroke two"></span><span class="rain-stroke three"></span><span class="word-tile tile-one">봄</span><span class="word-tile tile-two">하늘</span><span class="word-tile tile-three">나무</span></div>
+        <div class="game-copy"><span class="eyebrow">문장을 톡톡</span><h3>낱말비</h3><p>하늘에서 내려오는 구절과 문장을<br>사라지기 전에 쳐 보세요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
+        <div class="rain-art" aria-hidden="true"><span class="rain-stroke one"></span><span class="rain-stroke two"></span><span class="rain-stroke three"></span><span class="word-tile tile-one">꽃 피는 봄</span><span class="word-tile tile-two">맑은 하늘</span><span class="word-tile tile-three">푸른 바다</span></div>
       </a>
       <a class="game-card mole-card" href="#/mole">
-        <div class="game-copy"><span class="eyebrow">손끝으로 쏙쏙</span><h3>글쇠 두더지</h3><p>쏙 올라오는 글쇠를 톡!<br>45초 동안 가볍게 즐겨요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
-        <div class="mole-art" aria-hidden="true"><div class="mole-shadow"></div><div class="mini-mole"><i class="mole-ear left"></i><i class="mole-ear right"></i><i class="mole-eye left"></i><i class="mole-eye right"></i><i class="mole-nose"></i><span class="mole-key">ㄱ</span></div><span class="mole-spark">✦</span></div>
+        <div class="game-copy"><span class="eyebrow">손끝으로 쏙쏙</span><h3>낱말 두더지</h3><p>쏙 올라오는 낱말을 톡!<br>45초 동안 가볍게 즐겨요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
+        <div class="mole-art" aria-hidden="true"><div class="mole-shadow"></div><div class="mini-mole"><i class="mole-ear left"></i><i class="mole-ear right"></i><i class="mole-eye left"></i><i class="mole-eye right"></i><i class="mole-nose"></i><span class="mole-key">감</span></div><span class="mole-spark">✦</span></div>
       </a>
     </div>`;
   }
@@ -232,7 +232,7 @@
   }
   route('home', app => {
     const u = records.user();
-    const recordItems = [['word', '낱말연습', '타/분'], ['sentence', '짧은글', '타/분'], ['long', '긴글', '타/분'], ['rain', '낱말비', '점'], ['mole', '글쇠 두더지', '점']];
+    const recordItems = [['word', '낱말연습', '타/분'], ['sentence', '짧은글', '타/분'], ['long', '긴글', '타/분'], ['rain', '낱말비', '점'], ['mole', '낱말 두더지', '점']];
     app.innerHTML = `
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">

@@ -284,3 +284,8 @@ html:not([data-size="normal"]) .game-grid { grid-template-columns: 1fr; }
 /* 함께 보는 글 */
 .text-btn.shared { border-color: #cdb8f0; background: #faf6ff; }
 .text-btn.shared:hover { border-color: var(--primary); }
+
+/* 낱말 두더지 / 문장 낱말비 */
+.mole.word { font-size: 1.45rem; letter-spacing: 0; white-space: nowrap; padding: 0 6px; }
+.rain-word { font-size: 1.15rem; max-width: 92%; }
+@media (max-width: 720px) { .mole.word { font-size: 1.05rem; } .rain-word { font-size: .95rem; padding: 4px 10px; } }

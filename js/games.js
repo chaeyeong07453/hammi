@@ -1,4 +1,4 @@
-/* 미니게임: 낱말비 / 글쇠 두더지 */
+/* 미니게임: 낱말비(구절·문장) / 낱말 두더지 */
 (function () {
   const { $, el, shuffle, esc, settings, records, sound, route, header, resetInput } = App;
 
@@ -31,19 +31,23 @@
 
   /* ================= 낱말비 ================= */
   route('rain', app => {
-    header(app, '🌧️ 낱말비', '떨어지는 낱말을 바닥에 닿기 전에 쳐서 없애요. 다 치면 저절로 사라져요.');
+    header(app, '🌧️ 낱말비', '하늘에서 내려오는 구절과 문장을 바닥에 닿기 전에 쳐서 없애요. 다 치면 저절로 사라져요.');
     const card = el('div', 'card');
     card.innerHTML = `
       <div class="game-hud">
         <div class="stat"><div class="label">점수</div><div class="val" id="score">0</div></div>
         <div class="lives" id="lives"></div>
-        <div class="stat"><div class="label">놓친 낱말</div><div class="val" id="missed">0</div></div>
+        <div class="stat"><div class="label">놓친 글</div><div class="val" id="missed">0</div></div>
       </div>
       <div class="game-area" id="area"><div class="ground"></div></div>
-      <input class="type-input" id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="낱말을 치고 엔터 (다 치면 자동)" style="margin-top:12px" disabled>`;
+      <input class="type-input" id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="띄어쓰기까지 똑같이 치세요 (다 치면 자동)" style="margin-top:12px" disabled>`;
     app.appendChild(card);
     const area = $('#area'), input = $('#inp');
-    const PARAMS = { slow: { fall: 18000, spawn: 3600, max: 5 }, normal: { fall: 12000, spawn: 2600, max: 6 }, fast: { fall: 7000, spawn: 1800, max: 7 } };
+    const PARAMS = {
+      slow: { fall: 24000, spawn: 5000, max: 4, pool: DATA.gamePhrases.filter(t => t.length <= 7) },
+      normal: { fall: 17000, spawn: 4000, max: 5, pool: DATA.gamePhrases.filter(t => t.length <= 12) },
+      fast: { fall: 12000, spawn: 3200, max: 5, pool: DATA.gamePhrases }
+    };
     let words = [], lives = 5, score = 0, missed = 0, raf = null, spawnTimer = null, last = 0, running = false, p, seen = new Set();
 
     const drawLives = () => { $('#lives').textContent = '❤️'.repeat(lives) + '🤍'.repeat(5 - lives); };
@@ -53,8 +57,8 @@
       if (!running || words.length >= p.max) return;
       // 화면에 있거나 이번 판에 이미 나온 낱말은 제외. 다 쓰면 처음부터 다시
       const onScreen = new Set(words.map(w => w.text));
-      let cand = DATA.gameWords.filter(w => !onScreen.has(w) && !seen.has(w));
-      if (!cand.length) { seen.clear(); cand = DATA.gameWords.filter(w => !onScreen.has(w)); }
+      let cand = p.pool.filter(w => !onScreen.has(w) && !seen.has(w));
+      if (!cand.length) { seen.clear(); cand = p.pool.filter(w => !onScreen.has(w)); }
       const text = cand[Math.floor(Math.random() * cand.length)];
       seen.add(text);
       const e = el('div', 'rain-word', esc(text));
@@ -83,7 +87,8 @@
     function tryMatch(force) {
       const v = input.value.trim();
       if (!v) return;
-      const i = words.findIndex(w => w.text === v);
+      const norm = t => t.replace(/\s+/g, ' ').trim();
+      const i = words.findIndex(w => norm(w.text) === norm(v));
       if (i >= 0) {
         const w = words[i]; words.splice(i, 1);
         w.el.classList.add('pop'); setTimeout(() => w.el.remove(), 220);
@@ -98,17 +103,17 @@
     function end() {
       running = false; cancelAnimationFrame(raf); clearInterval(spawnTimer);
       input.disabled = true; sound.lose();
-      gameOver(area, { title: '낱말비 끝!', score, recordKey: 'rain', detail: `낱말 ${score}개를 없앴어요.` });
+      gameOver(area, { title: '낱말비 끝!', score, recordKey: 'rain', detail: `글 ${score}개를 없앴어요.` });
     }
     input.addEventListener('input', () => tryMatch(false));
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tryMatch(true); } });
-    levelPicker(area, '낱말비', '낱말이 떨어지는 빠르기를 고르세요. 5개를 놓치면 끝나요.', start);
+    levelPicker(area, '낱말비', '느리게: 짧은 구절 · 보통: 조금 긴 구절 · 빠르게: 속담과 문장. 5개를 놓치면 끝나요.', start);
     return () => { running = false; cancelAnimationFrame(raf); clearInterval(spawnTimer); };
   });
 
-  /* ================= 글쇠 두더지 ================= */
+  /* ================= 낱말 두더지 ================= */
   route('mole', app => {
-    header(app, '🐹 글쇠 두더지', '두더지가 들고 나온 글자의 글쇠를 재빨리 누르세요. 45초 동안 몇 마리나 잡을까요?');
+    header(app, '🐹 낱말 두더지', '두더지가 들고 나온 낱말을 재빨리 쳐서 잡아요. 45초 동안 몇 마리나 잡을까요?');
     const card = el('div', 'card');
     card.innerHTML = `
       <div class="game-hud">
@@ -117,19 +122,19 @@
         <div class="stat"><div class="label">놓침</div><div class="val" id="missed">0</div></div>
       </div>
       <div class="mole-area" id="area">
-        <div class="mole-grid">${Array.from({ length: 9 }, (_, i) => `<div class="hole" data-i="${i}"><div class="mole"></div></div>`).join('')}</div>
+        <div class="mole-grid">${Array.from({ length: 9 }, (_, i) => `<div class="hole" data-i="${i}"><div class="mole word"></div></div>`).join('')}</div>
       </div>
-      <p class="muted center" style="margin-top:12px">이 게임은 글자를 입력하는 칸이 없어요. 자판만 누르면 돼요. (한글/영어 어느 쪽이든 괜찮아요)</p>`;
+      <input class="type-input" id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="두더지가 든 낱말을 치세요 (다 치면 자동)" style="margin-top:12px" disabled>`;
     app.appendChild(card);
-    const area = $('#area');
+    const area = $('#area'), input = $('#inp');
     const holes = [...card.querySelectorAll('.hole')];
     const SETS = {
-      slow: { interval: 2300, stay: 2600, jamos: DATA.keyStages[0].jamos },
-      normal: { interval: 1600, stay: 1900, jamos: DATA.keyStages[0].jamos.concat(DATA.keyStages[1].jamos) },
-      fast: { interval: 1100, stay: 1400, jamos: DATA.keyStages[4].jamos }
+      slow: { interval: 2600, stay: 6500, pool: DATA.gameWords.filter(w => w.length <= 2) },
+      normal: { interval: 2000, stay: 5000, pool: DATA.gameWords.filter(w => w.length <= 3) },
+      fast: { interval: 1500, stay: 3800, pool: DATA.gameWords }
     };
     const DURATION = 45;
-    let running = false, score = 0, missed = 0, timeLeft = DURATION, popTimer = null, clock = null, active = new Map(); // holeIdx -> {jamo, hideTimer}
+    let running = false, score = 0, missed = 0, timeLeft = DURATION, popTimer = null, clock = null, level = 'normal', active = new Map(); // holeIdx -> {word, hideTimer}
 
     function hide(i, hit) {
       const a = active.get(i); if (!a) return;
@@ -144,38 +149,34 @@
       const free = holes.map((_, i) => i).filter(i => !active.has(i));
       if (!free.length) return;
       const i = free[Math.floor(Math.random() * free.length)];
-      const used = new Set([...active.values()].map(a => a.jamo));
-      const cand = s.jamos.filter(j => !used.has(j));
-      const jamo = cand[Math.floor(Math.random() * cand.length)];
-      holes[i].querySelector('.mole').textContent = jamo;
+      const used = new Set([...active.values()].map(a => a.word));
+      const cand = s.pool.filter(w => !used.has(w));
+      const word = cand[Math.floor(Math.random() * cand.length)];
+      holes[i].querySelector('.mole').textContent = word;
       holes[i].classList.add('up');
-      active.set(i, { jamo, hideTimer: setTimeout(() => hide(i, false), s.stay) });
+      active.set(i, { word, hideTimer: setTimeout(() => hide(i, false), s.stay) });
     }
-    function onKey(e) {
-      if (!running || e.repeat || ['Tab', 'Escape'].includes(e.key) || e.target.closest('input, textarea, #settings') || (e.target.closest('button, a') && ['Enter', ' '].includes(e.key))) return;
-      if (['ShiftLeft', 'ShiftRight', 'CapsLock', 'AltLeft', 'AltRight', 'ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].includes(e.code) || e.key === 'Shift' || e.key === 'HangulMode') return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      e.preventDefault();
-      const j = Hangul.jamoFromEvent(e);
-      const hit = [...active.entries()].find(([, a]) => a.jamo === j);
-      if (hit) { score++; $('#score').textContent = score; sound.ok(); hide(hit[0], true); }
-      else { sound.bad(); active.forEach((_, i) => { holes[i].classList.add('wrong'); setTimeout(() => holes[i].classList.remove('wrong'), 260); }); }
+    function tryMatch(force) {
+      const v = input.value.trim();
+      if (!v) return;
+      const hit = [...active.entries()].find(([, a]) => a.word === v);
+      if (hit) { score++; $('#score').textContent = score; sound.ok(); hide(hit[0], true); resetInput(input); }
+      else if (force) { sound.bad(); active.forEach((_, i) => { holes[i].classList.add('wrong'); setTimeout(() => holes[i].classList.remove('wrong'), 260); }); resetInput(input); }
     }
-    let level = 'normal';
     function start(l) {
-      level = l; running = true; timeLeft = DURATION;
-      document.addEventListener('keydown', onKey);
+      level = l; running = true; timeLeft = DURATION; input.disabled = false; input.focus();
       pop(); popTimer = setInterval(pop, SETS[level].interval);
       clock = setInterval(() => { timeLeft--; $('#time').textContent = timeLeft + '초'; if (timeLeft <= 5 && timeLeft > 0) sound.tick(); if (timeLeft <= 0) end(); }, 1000);
     }
     function end() {
-      running = false; clearInterval(popTimer); clearInterval(clock);
-      document.removeEventListener('keydown', onKey);
+      running = false; clearInterval(popTimer); clearInterval(clock); input.disabled = true;
       active.forEach((a, i) => { clearTimeout(a.hideTimer); holes[i].classList.remove('up'); }); active.clear();
       sound.win();
       gameOver(area, { title: '두더지 잡기 끝!', score, recordKey: 'mole', detail: `두더지 ${score}마리를 잡았어요. (놓침 ${missed}마리)` });
     }
-    levelPicker(area, '글쇠 두더지', '느리게: 가운뎃줄 글쇠만 · 보통: 가운뎃줄+윗줄 · 빠르게: 모든 글쇠', start);
-    return () => { running = false; clearInterval(popTimer); clearInterval(clock); document.removeEventListener('keydown', onKey); active.forEach(a => clearTimeout(a.hideTimer)); };
+    input.addEventListener('input', () => tryMatch(false));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tryMatch(true); } });
+    levelPicker(area, '낱말 두더지', '느리게: 한두 글자 낱말 · 보통: 세 글자까지 · 빠르게: 모든 낱말', start);
+    return () => { running = false; clearInterval(popTimer); clearInterval(clock); active.forEach(a => clearTimeout(a.hideTimer)); };
   });
 })();

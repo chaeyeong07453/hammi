@@ -38,7 +38,7 @@
     CHAR_KEY[ch.toUpperCase()] = ['Key' + ch.toUpperCase(), true];
   }
 
-  // 키 -> 자모 (글쇠 두더지 게임에서 사용)
+  // 키 -> 자모
   const KEY_JAMO = {};
   Object.keys(JAMO_KEY).forEach(j => {
     const [code, shift] = JAMO_KEY[j];
@@ -103,7 +103,7 @@
     return Object.assign({ unit: t[i] }, keyFor(t[i]) || { code: '', shift: false, finger: '', label: t[i] });
   }
 
-  // 키보드 이벤트 -> 자모 (글쇠 두더지 게임용)
+  // 키보드 이벤트 -> 자모
   function jamoFromEvent(e) {
     if (e.code && KEY_JAMO[(e.shiftKey ? 'S:' : '') + e.code]) return KEY_JAMO[(e.shiftKey ? 'S:' : '') + e.code];
     if (e.key && isJamo(e.key)) return e.key;
