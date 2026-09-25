@@ -199,10 +199,10 @@
 
   /* ---------- 홈과 연습 둘러보기 ---------- */
   const courses = [
-    { route: 'keys', name: '자리연습', desc: '손가락을 어디에 둘까요?<br>글쇠 하나부터 차근차근.', icon: 'keyboard', tone: 'peach', detail: '자판과 친해지기' },
-    { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br>익숙한 낱말로 가볍게.', icon: 'type', tone: 'sage', detail: '낱말 15개씩' },
-    { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br>한 줄씩 따라 써요.', icon: 'lines', tone: 'lavender', detail: '문장 10개씩' },
-    { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br>타자의 즐거움을 길게.', icon: 'book', tone: 'sand', detail: '내 글로도 연습 가능' }
+    { route: 'keys', name: '자리연습', desc: '손가락을 어디에 둘까요?<br> 글쇠 하나부터 차근차근.', icon: 'keyboard', tone: 'peach', detail: '자판과 친해지기' },
+    { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br> 익숙한 낱말로 가볍게.', icon: 'type', tone: 'sage', detail: '낱말 15개씩' },
+    { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br> 한 줄씩 따라 써요.', icon: 'lines', tone: 'lavender', detail: '문장 10개씩' },
+    { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br> 타자의 즐거움을 길게.', icon: 'book', tone: 'sand', detail: '내 글로도 연습 가능' }
   ];
   function courseCards() {
     return `<div class="course-grid">${courses.map((c, i) => `
