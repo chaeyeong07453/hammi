@@ -1,0 +1,12 @@
+{
+  "generator": "Blender 5.2.2 LTS",
+  "files": {
+    "tennis-world.glb": 788020,
+    "car.glb": 120832,
+    "race-world.glb": 1543888,
+    "tennis-ball.glb": 90380,
+    "tennis-player.glb": 175840
+  },
+  "coordinates": "glTF Y-up; +Z toward camera; car forward +Z",
+  "recolorMaterial": "CarPaint"
+}
