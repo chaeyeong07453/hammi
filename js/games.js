@@ -14,12 +14,15 @@
 
   function gameOver(container, opt) {
     const isNew = records.set(opt.recordKey, opt.score, (a, b) => a > b);
+    records.bump();
     const best = records.get(opt.recordKey);
+    const u = records.user();
+    const rank = u ? Auth.rankOf(opt.recordKey, u.id) : null;
     const ov = el('div', 'overlay');
     ov.innerHTML = `<h2>${opt.title}</h2>
       ${isNew && opt.score > 0 ? '<div class="new-record">🏆 새로운 최고 기록!</div>' : ''}
       <div class="score">${opt.score}점</div>
-      <p class="muted" style="margin:0">${opt.detail || ''}<br>최고 기록 ${best}점</p>
+      <p class="muted" style="margin:0">${opt.detail || ''}<br>최고 기록 ${best}점${rank ? ` · <a href="#/rank/${opt.recordKey}">랭킹 ${rank}위</a>` : ''}</p>
       <div class="btn-row"><button class="btn big" id="g-again">🔁 다시 하기</button><a class="btn big secondary" href="#/home">🏠 처음으로</a></div>`;
     container.appendChild(ov);
     $('#g-again', ov).onclick = () => location.reload();

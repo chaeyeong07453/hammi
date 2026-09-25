@@ -248,3 +248,30 @@ textarea.text-input { resize: vertical; min-height: 200px; font-family: inherit;
 .text-btn.new .t { color: var(--accent); }
 .text-btn .del { position: absolute; top: 10px; right: 12px; font-size: .8rem; color: var(--muted); background: #f3efe4; border-radius: 8px; padding: 4px 10px; }
 .text-btn .del:hover { background: var(--bad-bg); color: var(--bad); }
+
+/* 로그인 / 회원가입 / 랭킹 */
+.topbar .actions { align-items: center; }
+#user-box { display: inline-flex; align-items: center; gap: 8px; }
+.user-name { font-weight: 800; color: var(--primary); white-space: nowrap; }
+.tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+.tabs.wrap { flex-wrap: wrap; }
+.tabs .btn { flex: 1; }
+.tabs.wrap .btn { flex: 0 1 auto; }
+.user-pick { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.user-btn { min-height: 64px; padding: 10px 24px; font-size: 1.15rem; font-weight: 800; border-radius: 14px; border: 3px solid var(--line); background: #fff; color: var(--text); }
+.user-btn:hover { border-color: var(--primary); }
+.user-btn.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.text-input.pin { font-size: 2rem; letter-spacing: .5em; text-align: center; max-width: 320px; }
+.form-msg { min-height: 1.6em; color: var(--bad); font-weight: 700; text-align: center; }
+.menu-card.rank { border-color: #ffe082; background: #fffdf3; }
+.menu-card.rank:hover { border-color: #e2b400; }
+.rank-note { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+.rank-note a { color: var(--primary); }
+.rank-table { width: 100%; border-collapse: collapse; font-size: 1.1rem; }
+.rank-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); }
+.rank-table tr:first-child td { font-size: 1.3rem; background: #fff8e1; }
+.rank-table tr.me td { background: #eaf2fb; font-weight: 800; }
+.rank-table .pos { width: 4em; font-weight: 800; text-align: center; }
+.rank-table .name small { color: var(--muted); font-weight: 500; }
+.rank-table .val { text-align: right; font-weight: 800; color: var(--primary); white-space: nowrap; }
+@media (max-width: 720px) { .topbar .brand small { display: none; } .user-name { font-size: .85rem; } }

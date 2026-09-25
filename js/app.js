@@ -15,14 +15,24 @@
   };
 
   /* ---------- 기록 ---------- */
+  // 로그인한 사람이 있으면 그 사람 계정에, 없으면 이 브라우저 공용(손님)으로 저장
   const records = {
-    get(key) { try { return JSON.parse(localStorage.getItem('hammi.rec.' + key)); } catch (e) { return null; } },
+    user() { return window.Auth ? Auth.current() : null; },
+    get(key) {
+      const u = this.user(); if (u) return u.rec[key] == null ? null : u.rec[key];
+      try { return JSON.parse(localStorage.getItem('hammi.rec.' + key)); } catch (e) { return null; }
+    },
     // 더 좋은 기록이면 저장하고 true
     set(key, val, better) {
       const prev = this.get(key);
-      if (prev == null || better(val, prev)) { localStorage.setItem('hammi.rec.' + key, JSON.stringify(val)); return true; }
-      return false;
-    }
+      if (prev != null && !better(val, prev)) return false;
+      const u = this.user();
+      if (u) { u.rec[key] = val; Auth.save(u); }
+      else localStorage.setItem('hammi.rec.' + key, JSON.stringify(val));
+      return true;
+    },
+    // 연습/게임을 하나 마칠 때마다 횟수 증가
+    bump() { const u = this.user(); if (u) { u.count = (u.count || 0) + 1; u.last = Date.now(); Auth.save(u); } }
   };
 
   /* ---------- 소리 ---------- */
@@ -102,9 +112,13 @@
     app.innerHTML = '';
     const card = el('div', 'card result');
     const isNew = opts.recordKey ? records.set(opts.recordKey, opts.recordVal, opts.better || ((a, b) => a > b)) : false;
+    records.bump();
+    const u = records.user();
+    const rank = u && opts.recordKey ? Auth.rankOf(opts.recordKey, u.id) : null;
     card.innerHTML = `
       <h1>${opts.title}</h1>
       ${isNew ? '<div class="new-record">🏆 새로운 최고 기록!</div>' : ''}
+      ${rank ? `<div class="rank-note">현재 <a href="#/rank/${opts.recordKey}">랭킹 ${rank}위</a></div>` : (!u && opts.recordKey ? `<div class="rank-note muted"><a href="#/login">로그인</a>하면 기록이 내 이름으로 저장되고 랭킹에 올라가요</div>` : '')}
       <div class="cheer">${opts.cheer}</div>
       <div class="big-stats">${opts.stats.map(([l, v]) => `<div class="stat"><div class="label">${l}</div><div class="val">${v}</div></div>`).join('')}</div>
       <div class="btn-row">
@@ -176,10 +190,12 @@
   route('home', app => {
     const best = k => records.get(k);
     const w = best('word'), s = best('sentence'), l = best('long'), r = best('rain'), m = best('mole');
+    const u = records.user();
     app.innerHTML = `
       <div class="hero">
         <h1>👵👴 함미합삐 타자연습</h1>
-        <p class="lead">천천히, 즐겁게, 매일 조금씩. 자판과 친해지는 연습장입니다.</p>
+        <p class="lead">${u ? `👋 <b>${esc(u.id)}</b>님, 오늘도 반가워요! 지금까지 ${u.count || 0}번 연습했어요.` : '천천히, 즐겁게, 매일 조금씩. 자판과 친해지는 연습장입니다.'}</p>
+        ${u ? '' : '<a class="btn accent" href="#/login">👤 로그인하고 내 기록 남기기</a>'}
       </div>
       <div class="menu-grid">
         <a class="menu-card" href="#/keys"><span class="icon">⌨️</span><span class="title">1단계 · 자리연습</span><span class="desc">글쇠 하나씩, 손가락 자리부터 익혀요</span></a>
@@ -188,9 +204,10 @@
         <a class="menu-card" href="#/long"><span class="icon">📖</span><span class="title">4단계 · 긴글연습</span><span class="desc">시와 이야기를 한 줄 한 줄 따라 쳐요</span></a>
         <a class="menu-card game" href="#/rain"><span class="icon">🌧️</span><span class="title">게임 · 낱말비</span><span class="desc">떨어지는 낱말을 바닥에 닿기 전에!</span></a>
         <a class="menu-card game" href="#/mole"><span class="icon">🐹</span><span class="title">게임 · 글쇠 두더지</span><span class="desc">두더지가 든 글쇠를 재빨리 눌러요</span></a>
+        <a class="menu-card rank" href="#/rank"><span class="icon">🏆</span><span class="title">랭킹</span><span class="desc">이 컴퓨터에서 누가 제일 잘 치나 겨뤄 봐요</span></a>
       </div>
       <div class="card">
-        <h2>🏆 나의 최고 기록</h2>
+        <h2>🏆 ${u ? esc(u.id) + '님의' : '나의'} 최고 기록 ${u ? '' : '<small class="muted" style="font-weight:500;font-size:.8rem">(로그인 전에는 손님 기록)</small>'}</h2>
         <div class="records">
           <div class="record"><div class="label">낱말연습 타수</div><div class="val">${w ? w + '타/분' : '-'}</div></div>
           <div class="record"><div class="label">짧은글 타수</div><div class="val">${s ? s + '타/분' : '-'}</div></div>
