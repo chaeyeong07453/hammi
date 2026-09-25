@@ -64,8 +64,8 @@
       const box = $('#user-box'); if (!box) return;
       const u = this.current();
       box.innerHTML = u
-        ? `<span class="user-name">👤 ${esc(u.id)}님</span><button class="btn sm ghost" id="btn-logout">나가기</button>`
-        : `<a class="btn sm accent" href="#/login">👤 로그인</a>`;
+        ? `<span class="user-name">${esc(u.id)}님</span><button class="btn sm ghost" id="btn-logout">나가기</button>`
+        : `<a class="btn sm accent" href="#/login">${icon('user')} 로그인</a>`;
       const lo = $('#btn-logout'); if (lo) lo.onclick = () => { this.logout(); location.hash = '#/home'; if (location.hash === '#/home') dispatchEvent(new HashChangeEvent('hashchange')); };
     }
   };
@@ -92,9 +92,9 @@
         <button class="btn ${mode === 'signup' ? 'on' : 'secondary'}" data-m="signup">회원가입</button></div>`;
       if (mode === 'login') {
         card.innerHTML = tabs + `
-          <h2>누구세요?</h2>
+          <h2>다시 만나 반가워요.</h2>
           <p class="lead">이름을 누르고 비밀번호 4자리를 넣어 주세요.</p>
-          <div class="user-pick">${users.map(u => `<button class="user-btn ${chosen === u.id ? 'on' : ''}" data-id="${esc(u.id)}">👤 ${esc(u.id)}</button>`).join('')}</div>
+          <div class="user-pick">${users.map(u => `<button class="user-btn ${chosen === u.id ? 'on' : ''}" data-id="${esc(u.id)}">${esc(u.id)}</button>`).join('')}</div>
           <div class="form-row"><label for="pin">비밀번호 (숫자 4자리)</label><input class="text-input pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
           <div class="form-msg" id="msg"></div>
           <div class="btn-row"><button class="btn big" id="go">들어가기</button></div>`;
@@ -110,14 +110,14 @@
         $('#pin').focus();
       } else {
         card.innerHTML = tabs + `
-          <h2>새로 만들기</h2>
+          <h2>나만의 연습 기록을 시작해요.</h2>
           <p class="lead">이름과 숫자 네 자리 비밀번호만 있으면 돼요. 전화번호나 이메일은 필요 없어요.</p>
-          <div class="form-row"><label for="uid">이름 (부르는 이름이면 돼요)</label><input class="text-input" id="uid" type="text" maxlength="10" placeholder="예) 할머니, 순자, 영감" autocomplete="off"></div>
+          <div class="form-row"><label for="uid">이름 (부르는 이름이면 돼요)</label><input class="text-input" id="uid" type="text" maxlength="10" placeholder="예) 순자, 영수, 봄날" autocomplete="off"></div>
           <div class="form-row"><label for="pin">비밀번호 (숫자 4자리)</label><input class="text-input pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
           <div class="form-row"><label for="pin2">비밀번호 한 번 더</label><input class="text-input pin" id="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
           <div class="form-msg" id="msg"></div>
           <div class="btn-row"><button class="btn big" id="go">만들고 시작하기</button></div>
-          <div class="tips">💡 비밀번호는 생일이나 기억하기 쉬운 숫자로 하세요. 잊어버리면 새로 만들어야 해요.</div>`;
+          <div class="tips">기록은 이 브라우저에만 저장돼요. 비밀번호는 기억해 주세요. 잊어버리면 새 계정을 만들어야 해요.</div>`;
         $('#go').onclick = () => {
           const id = $('#uid').value, p1 = $('#pin').value, p2 = $('#pin2').value;
           if (p1 !== p2) return msg('비밀번호 두 개가 서로 달라요.');
@@ -149,9 +149,9 @@
       card.innerHTML = `
         <div class="tabs wrap">${RANK_KEYS.map(k => `<button class="btn sm ${k[0] === key ? 'on' : 'secondary'}" data-k="${k[0]}">${k[1]}</button>`).join('')}</div>
         <h2>${label}</h2>
-        ${list.length ? `<table class="rank-table"><tbody>${list.map((r, i) => `<tr class="${me && r.id === me.id ? 'me' : ''}"><td class="pos">${medal(i)}</td><td class="name">👤 ${esc(r.id)}${me && r.id === me.id ? ' <small>(나)</small>' : ''}</td><td class="val">${fmt(r.val)}</td></tr>`).join('')}</tbody></table>`
+        ${list.length ? `<table class="rank-table"><tbody>${list.map((r, i) => `<tr class="${me && r.id === me.id ? 'me' : ''}"><td class="pos">${medal(i)}</td><td class="name">${esc(r.id)}${me && r.id === me.id ? ' <small>(나)</small>' : ''}</td><td class="val">${fmt(r.val)}</td></tr>`).join('')}</tbody></table>`
           : `<p class="muted center" style="padding:20px">아직 기록이 없어요. 연습을 마치면 여기에 이름이 올라가요!</p>`}
-        ${!me ? `<div class="btn-row"><a class="btn big accent" href="#/login">👤 로그인하고 내 기록 올리기</a></div>` : ''}
+        ${!me ? `<div class="btn-row"><a class="btn big accent" href="#/login">로그인하고 내 기록 올리기</a></div>` : ''}
         `;
       card.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { key = b.dataset.k; history.replaceState(null, '', '#/rank/' + key); draw(); });
     }

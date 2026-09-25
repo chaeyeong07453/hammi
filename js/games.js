@@ -5,9 +5,9 @@
   function levelPicker(container, title, desc, onPick) {
     const ov = el('div', 'overlay');
     ov.innerHTML = `<h2>${title}</h2><p class="muted" style="margin:0">${desc}</p><div class="level-pick">
-      <button class="btn big" data-l="slow">🐢 느리게</button>
-      <button class="btn big" data-l="normal">🚶 보통</button>
-      <button class="btn big" data-l="fast">🐇 빠르게</button></div>`;
+      <button class="btn big" data-l="slow">느리게</button>
+      <button class="btn big" data-l="normal">보통</button>
+      <button class="btn big" data-l="fast">빠르게</button></div>`;
     ov.querySelectorAll('button').forEach(b => b.onclick = () => { ov.remove(); onPick(b.dataset.l); });
     container.appendChild(ov);
   }
@@ -23,7 +23,7 @@
       ${isNew && opt.score > 0 ? '<div class="new-record">🏆 새로운 최고 기록!</div>' : ''}
       <div class="score">${opt.score}점</div>
       <p class="muted" style="margin:0">${opt.detail || ''}<br>최고 기록 ${best}점${rank ? ` · <a href="#/rank/${opt.recordKey}">랭킹 ${rank}위</a>` : ''}</p>
-      <div class="btn-row"><button class="btn big" id="g-again">🔁 다시 하기</button><a class="btn big secondary" href="#/home">🏠 처음으로</a></div>`;
+      <div class="btn-row"><button class="btn big" id="g-again">다시 하기</button><a class="btn big secondary" href="#/home">처음으로</a></div>`;
     container.appendChild(ov);
     $('#g-again', ov).onclick = () => location.reload();
     $('#g-again', ov).focus();
@@ -149,7 +149,7 @@
       active.set(i, { jamo, hideTimer: setTimeout(() => hide(i, false), s.stay) });
     }
     function onKey(e) {
-      if (!running || e.repeat) return;
+      if (!running || e.repeat || ['Tab', 'Escape'].includes(e.key) || e.target.closest('input, textarea, #settings') || (e.target.closest('button, a') && ['Enter', ' '].includes(e.key))) return;
       if (['ShiftLeft', 'ShiftRight', 'CapsLock', 'AltLeft', 'AltRight', 'ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].includes(e.code) || e.key === 'Shift' || e.key === 'HangulMode') return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       e.preventDefault();

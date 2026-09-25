@@ -77,10 +77,20 @@
     const hash = location.hash.replace(/^#\/?/, '') || 'home';
     const [name, ...rest] = hash.split('/');
     const app = $('#app');
+    const group = ['keys', 'words', 'sentences', 'long', 'practice'].includes(name) ? 'practice' : ['rain', 'mole', 'games'].includes(name) ? 'games' : name;
+    document.querySelectorAll('[data-nav]').forEach(link => {
+      if (link.dataset.nav === group) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+    app.dataset.page = name;
     app.innerHTML = '';
     window.scrollTo(0, 0);
     const fn = routes[name] || routes.home;
     const r = fn(app, rest);
+    const heading = $('h1', app);
+    document.title = (heading ? heading.innerText.replace(/\s+/g, ' ').trim() + ' · ' : '') + '함미합삐 타자연습';
+    if (heading) { heading.tabIndex = -1; if (!app.contains(document.activeElement)) heading.focus({ preventScroll: true }); }
+    app.querySelectorAll('.type-input').forEach(input => input.setAttribute('aria-label', input.placeholder || '연습 글 입력'));
     if (typeof r === 'function') cleanup = r;
   }
   window.addEventListener('hashchange', navigate);
@@ -88,7 +98,8 @@
   /* ---------- 공용 UI ---------- */
   function header(app, title, lead, back) {
     const h = el('div', 'practice-head');
-    h.innerHTML = `<div><h1>${title}</h1>${lead ? `<p class="lead" style="margin:0">${lead}</p>` : ''}</div>`;
+    title = title.replace(/^[\p{Extended_Pictographic}\uFE0F\s]+/u, '');
+    h.innerHTML = `<div><span class="eyebrow">나의 속도로, 한 걸음씩</span><h1>${title}</h1>${lead ? `<p class="lead" style="margin:0">${lead}</p>` : ''}</div>`;
     const b = el('a', 'btn ghost', '← ' + (back || '처음으로'));
     b.href = '#/home';
     h.appendChild(b);
@@ -122,8 +133,8 @@
       <div class="cheer">${opts.cheer}</div>
       <div class="big-stats">${opts.stats.map(([l, v]) => `<div class="stat"><div class="label">${l}</div><div class="val">${v}</div></div>`).join('')}</div>
       <div class="btn-row">
-        <button class="btn big" id="res-again">🔁 다시 하기</button>
-        <a class="btn big secondary" href="${opts.backHref || '#/home'}">${opts.backLabel || '🏠 처음으로'}</a>
+        <button class="btn big" id="res-again">${icon('arrow')} 다시 하기</button>
+        <a class="btn big secondary" href="${opts.backHref || '#/home'}">${opts.backLabel || '처음으로'}</a>
       </div>`;
     app.appendChild(card);
     $('#res-again').onclick = opts.onAgain;
@@ -186,43 +197,85 @@
     setTimeout(() => input.focus(), 0);
   }
 
-  /* ---------- 홈 ---------- */
+  /* ---------- 홈과 연습 둘러보기 ---------- */
+  const courses = [
+    { route: 'keys', name: '자리연습', desc: '손가락을 어디에 둘까요?<br>글쇠 하나부터 차근차근.', icon: 'keyboard', tone: 'peach', detail: '자판과 친해지기' },
+    { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br>익숙한 낱말로 가볍게.', icon: 'type', tone: 'sage', detail: '낱말 15개씩' },
+    { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br>한 줄씩 따라 써요.', icon: 'lines', tone: 'lavender', detail: '문장 10개씩' },
+    { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br>타자의 즐거움을 길게.', icon: 'book', tone: 'sand', detail: '내 글로도 연습 가능' }
+  ];
+  function courseCards() {
+    return `<div class="course-grid">${courses.map((c, i) => `
+      <a class="course-card ${c.tone}" href="#/${c.route}">
+        <div class="course-top"><span class="course-icon">${c.icon === 'type' ? '<span class="type-symbol">가</span>' : icon(c.icon)}</span><span class="course-step">0${i + 1}<span>단계</span></span></div>
+        <h3>${c.name}</h3><p>${c.desc}</p>
+        <div class="course-bottom"><span>${c.detail}</span><span class="round-arrow">${icon('arrow')}</span></div>
+      </a>`).join('')}</div>`;
+  }
+  function gameCards() {
+    return `<div class="game-grid">
+      <a class="game-card rain-card" href="#/rain">
+        <div class="game-copy"><span class="eyebrow">낱말을 톡톡</span><h3>낱말비</h3><p>하늘에서 내려오는 낱말을<br>사라지기 전에 쳐 보세요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
+        <div class="rain-art" aria-hidden="true"><span class="rain-stroke one"></span><span class="rain-stroke two"></span><span class="rain-stroke three"></span><span class="word-tile tile-one">봄</span><span class="word-tile tile-two">하늘</span><span class="word-tile tile-three">나무</span></div>
+      </a>
+      <a class="game-card mole-card" href="#/mole">
+        <div class="game-copy"><span class="eyebrow">손끝으로 쏙쏙</span><h3>글쇠 두더지</h3><p>쏙 올라오는 글쇠를 톡!<br>45초 동안 가볍게 즐겨요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
+        <div class="mole-art" aria-hidden="true"><div class="mole-shadow"></div><div class="mini-mole"><i class="mole-ear left"></i><i class="mole-ear right"></i><i class="mole-eye left"></i><i class="mole-eye right"></i><i class="mole-nose"></i><span class="mole-key">ㄱ</span></div><span class="mole-spark">✦</span></div>
+      </a>
+    </div>`;
+  }
+  function guideContent() {
+    return `<div class="guide-grid">
+      <div><span class="guide-number">01</span><h3>한글로 준비하기</h3><p>한/영 키를 눌러 입력 언어를 한글로 바꿔 주세요.</p></div>
+      <div><span class="guide-number">02</span><h3>손가락 제자리 찾기</h3><p>왼손 검지는 <kbd>ㄹ</kbd>, 오른손 검지는 <kbd>ㅓ</kbd>. 작은 돌기가 느껴질 거예요.</p></div>
+      <div><span class="guide-number">03</span><h3>편안하게 맞추기</h3><p>위쪽 ‘화면 설정’에서 글자를 키우고, 낱말 읽어주기를 켤 수 있어요.</p></div>
+    </div>`;
+  }
   route('home', app => {
-    const best = k => records.get(k);
-    const w = best('word'), s = best('sentence'), l = best('long'), r = best('rain'), m = best('mole');
     const u = records.user();
+    const recordItems = [['word', '낱말연습', '타/분'], ['sentence', '짧은글', '타/분'], ['long', '긴글', '타/분'], ['rain', '낱말비', '점'], ['mole', '글쇠 두더지', '점']];
     app.innerHTML = `
-      <div class="hero">
-        <h1>👵👴 함미합삐 타자연습</h1>
-        <p class="lead">${u ? `👋 <b>${esc(u.id)}</b>님, 오늘도 반가워요! 지금까지 ${u.count || 0}번 연습했어요.` : '천천히, 즐겁게, 매일 조금씩. 자판과 친해지는 연습장입니다.'}</p>
-        ${u ? '' : '<a class="btn accent" href="#/login">👤 로그인하고 내 기록 남기기</a>'}
-      </div>
-      <div class="menu-grid">
-        <a class="menu-card" href="#/keys"><span class="icon">⌨️</span><span class="title">1단계 · 자리연습</span><span class="desc">글쇠 하나씩, 손가락 자리부터 익혀요</span></a>
-        <a class="menu-card" href="#/words"><span class="icon">🍎</span><span class="title">2단계 · 낱말연습</span><span class="desc">일상에서 쓰는 쉬운 낱말을 쳐 봐요</span></a>
-        <a class="menu-card" href="#/sentences"><span class="icon">📝</span><span class="title">3단계 · 짧은글연습</span><span class="desc">속담과 일상 문장을 한 줄씩</span></a>
-        <a class="menu-card" href="#/long"><span class="icon">📖</span><span class="title">4단계 · 긴글연습</span><span class="desc">시와 이야기를 한 줄 한 줄 따라 쳐요</span></a>
-        <a class="menu-card game" href="#/rain"><span class="icon">🌧️</span><span class="title">게임 · 낱말비</span><span class="desc">떨어지는 낱말을 바닥에 닿기 전에!</span></a>
-        <a class="menu-card game" href="#/mole"><span class="icon">🐹</span><span class="title">게임 · 글쇠 두더지</span><span class="desc">두더지가 든 글쇠를 재빨리 눌러요</span></a>
-        <a class="menu-card rank" href="#/rank"><span class="icon">🏆</span><span class="title">랭킹</span><span class="desc">이 컴퓨터에서 누가 제일 잘 치나 겨뤄 봐요</span></a>
-      </div>
-      <div class="card">
-        <h2>🏆 ${u ? esc(u.id) + '님의' : '나의'} 최고 기록 ${u ? '' : '<small class="muted" style="font-weight:500;font-size:.8rem">(로그인 전에는 손님 기록)</small>'}</h2>
-        <div class="records">
-          <div class="record"><div class="label">낱말연습 타수</div><div class="val">${w ? w + '타/분' : '-'}</div></div>
-          <div class="record"><div class="label">짧은글 타수</div><div class="val">${s ? s + '타/분' : '-'}</div></div>
-          <div class="record"><div class="label">긴글 타수</div><div class="val">${l ? l + '타/분' : '-'}</div></div>
-          <div class="record"><div class="label">낱말비 점수</div><div class="val">${r != null ? r + '점' : '-'}</div></div>
-          <div class="record"><div class="label">두더지 점수</div><div class="val">${m != null ? m + '점' : '-'}</div></div>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <span class="hero-eyebrow"><span class="status-dot"></span> 천천히, 즐겁게. 나의 속도로.</span>
+          <h1 id="hero-title">오늘도,<br><span>한 글자 더.</span></h1>
+          <p class="hero-description">${u ? `<b>${esc(u.id)}님, 반가워요.</b><br>오늘도 나를 위한 작은 배움을 시작해요.` : '한 글자씩 익숙해지는 즐거움.<br>부담 없이 시작하는 나만의 타자 시간.'}</p>
+          <div class="hero-actions"><a class="btn hero-cta" href="#/keys">타자연습 시작하기 ${icon('arrow')}</a><a class="text-link" href="#/guide">처음 오셨나요?</a></div>
+          <p class="hero-note">${icon('check')} ${u ? `지금까지 ${u.count || 0}번의 연습을 함께했어요` : '가입 없이도 바로 연습할 수 있어요'}</p>
         </div>
-      </div>
-      <div class="tips">💡 <b>시작 전에 확인하세요</b>
-        <ul>
-          <li>자판이 <b>한글</b>로 되어 있는지 확인하세요. (한/영 키 또는 키보드 오른쪽 아래 표시)</li>
-          <li>왼손 검지는 <b>ㄹ</b>, 오른손 검지는 <b>ㅓ</b> 위에 올려 두세요. 두 글쇠에는 작은 돌기가 있어요.</li>
-          <li>글자가 작으면 위쪽 <b>⚙️ 설정</b>에서 글자 크기를 키울 수 있어요.</li>
-        </ul>
-      </div>`;
+        <div class="hero-visual">
+          <img src="assets/typing-still-life.jpg" width="1536" height="1024" alt="따뜻한 햇살 아래 크림색 키보드와 작은 테라코타 화분" fetchpriority="high">
+          <span class="image-caption">A LITTLE PRACTICE, EVERY DAY.</span>
+          <div class="hero-sticker"><span class="sticker-icon">${icon('leaf')}</span><span>잘하는 것보다 중요한 건,<br><strong>오늘도 해보는 마음.</strong></span></div>
+        </div>
+      </section>
+      <div class="welcome-strip"><span class="welcome-icon">${icon('keyboard')}</span><p><strong>처음이어도 괜찮아요.</strong><span> 자리연습부터 한 걸음씩 함께해요.</span></p><a href="#/keys">첫 연습 시작 ${icon('arrow')}</a></div>
+      <section class="home-section" aria-labelledby="practice-title">
+        <div class="section-heading"><div><span class="eyebrow">기초부터 차근차근</span><h2 id="practice-title">어디부터 시작할까요?</h2></div><span class="section-aside">내게 맞는 연습을 골라 보세요.</span></div>
+        ${courseCards()}
+      </section>
+      <section class="home-section games-section" aria-labelledby="games-title">
+        <div class="section-heading"><div><span class="eyebrow">조금 더 신나게</span><h2 id="games-title">놀다 보면, 어느새 익숙하게.</h2></div><span class="section-aside">가볍게 즐기는 타자게임</span></div>
+        ${gameCards()}
+      </section>
+      <section class="record-section" aria-labelledby="record-title">
+        <div class="section-heading"><div><span class="eyebrow">작은 연습이 쌓이는 곳</span><h2 id="record-title">${u ? esc(u.id) + '님의' : '나의'} 최고 기록</h2></div><a class="text-link" href="#/rank">우리의 기록 보기 ${icon('arrow')}</a></div>
+        <div class="records">${recordItems.map(([key, label, unit]) => { const value = records.get(key); return `<div class="record"><span class="label">${label}</span><div class="val">${value == null ? '<span class="empty-record">—</span>' : value}<span class="record-unit">${unit}</span></div></div>`; }).join('')}</div>
+        <p class="record-note">${icon(u ? 'shield' : 'user')} ${u ? '오늘의 연습도 내 이름으로 차곡차곡 쌓여요.' : '지금은 손님 기록이에요. <a href="#/login">로그인</a>하면 내 이름으로 모을 수 있어요.'}</p>
+      </section>
+      <details class="home-guide"><summary><span>${icon('bulb')} 시작 전, 이것만 알아두세요</span><span class="guide-plus" aria-hidden="true">+</span></summary>${guideContent()}</details>`;
+  });
+  route('practice', app => {
+    header(app, '어디부터 시작할까요?', '처음이라면 자리연습부터. 익숙해졌다면 원하는 연습을 골라 보세요.');
+    app.insertAdjacentHTML('beforeend', courseCards());
+  });
+  route('games', app => {
+    header(app, '놀다 보면, 어느새 익숙하게.', '빠르기를 직접 고르고, 내 속도로 즐기는 타자게임.');
+    app.insertAdjacentHTML('beforeend', gameCards());
+  });
+  route('guide', app => {
+    header(app, '시작은 가볍게, 내 속도로.', '키보드가 처음이어도 괜찮아요. 하나씩 함께 익혀 봐요.');
+    app.insertAdjacentHTML('beforeend', `<div class="card guide-page">${guideContent()}<div class="btn-row"><a class="btn big" href="#/keys">자리연습 시작하기 ${icon('arrow')}</a></div><p class="muted center">실제 키보드가 있는 컴퓨터에서 연습하면 더 편해요.</p></div>`);
   });
 
   /* ---------- 설정 패널 ---------- */
@@ -231,9 +284,9 @@
     const render = () => {
       const d = settings.data;
       panel.innerHTML = `
-        <div class="card" style="margin:0">
+        <div class="card settings-card" style="margin:0"><div class="settings-heading"><div><span class="eyebrow">나에게 편안하게</span><h2>화면과 소리 설정</h2></div><button class="btn sm ghost" id="settings-close" aria-label="설정 닫기">${icon('close')}</button></div>
           <div class="setting-row"><span class="label">글자 크기</span>
-            ${[['normal','보통'],['large','크게'],['xlarge','아주 크게']].map(([v, l]) => `<button class="btn sm ${d.size === v ? 'on' : 'secondary'}" data-k="size" data-v="${v}">${l}</button>`).join('')}
+            ${[['normal','보통'],['large','크게'],['xlarge','아주 크게']].map(([v, l]) => `<button class="btn sm ${d.size === v ? 'on' : 'secondary'}" aria-pressed="${d.size === v}" data-k="size" data-v="${v}">${l}</button>`).join('')}
           </div>
           <div class="setting-row"><span class="label">효과음</span>
             <button class="btn sm ${d.sound ? 'on' : 'secondary'}" data-k="sound" data-v="1">켜기</button>
@@ -248,19 +301,34 @@
             <button class="btn sm ${!d.speak ? 'on' : 'secondary'}" data-k="speak" data-v="0">끄기</button>
           </div>
         </div>`;
-      panel.querySelectorAll('button').forEach(b => b.onclick = () => {
+      panel.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
         const k = b.dataset.k, v = b.dataset.v;
         settings.data[k] = k === 'size' ? v : v === '1';
         settings.save(); render();
+        panel.querySelector(`[data-k="${k}"][data-v="${v}"]`).focus();
         document.querySelectorAll('.kbd').forEach(kb => kb.classList.toggle('hidden', !settings.data.keyboard));
         if (k === 'sound' && settings.data.sound) sound.ok();
       });
+      panel.querySelectorAll('[data-k]:not([data-k="size"])').forEach(b => b.setAttribute('aria-pressed', String(d[b.dataset.k] === (b.dataset.v === '1'))));
+      $('#settings-close').onclick = () => { toggleSettings(false); $('#btn-settings').focus(); };
     };
     render();
-    $('#btn-settings').onclick = () => { panel.classList.toggle('open'); render(); };
+    function toggleSettings(force) {
+      const open = panel.classList.toggle('open', force);
+      $('#btn-settings').setAttribute('aria-expanded', String(open));
+      render();
+      if (open) panel.querySelector('button').focus();
+    }
+    $('#btn-settings').onclick = () => toggleSettings(!panel.classList.contains('open'));
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && panel.classList.contains('open')) { toggleSettings(false); $('#btn-settings').focus(); }
+    });
   }
 
   global.App = { $, el, shuffle, pick, esc, settings, records, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput };
 
-  document.addEventListener('DOMContentLoaded', () => { settings.load(); initSettings(); navigate(); });
+  document.addEventListener('DOMContentLoaded', () => {
+    settings.load(); initSettings(); navigate();
+    $('.skip-link').addEventListener('click', e => { e.preventDefault(); $('#main-content').focus(); });
+  });
 })(window);
