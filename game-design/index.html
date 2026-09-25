@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+ <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <meta name="robots" content="noindex"><meta name="theme-color" content="#faf8fe">
+ <title>함미합삐 플레이 · 3D 게임 디자인</title>
+ <link rel="icon" href="../assets/favicon.svg">
+ <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+ <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="preview.css">
+ <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/"}}</script>
+</head>
+<body>
+ <a class="preview-skip" href="#game-root">경기 화면으로 바로가기</a>
+ <header class="preview-header"><div class="preview-header-inner">
+  <a class="preview-brand" href="../#/games"><span id="brand-icon"></span><span>함미합삐 <b>play</b><small>오늘은, 놀면서 한 글자 더.</small></span></a>
+  <nav class="preview-tabs" aria-label="게임 디자인 선택"><a href="#race" data-game-tab="race"></a><a href="#tennis" data-game-tab="tennis"></a></nav>
+  <span class="preview-badge"><i></i> 디자인 미리보기</span>
+ </div></header>
+ <main class="preview-container">
+  <div id="game-root" tabindex="-1"></div>
+  <section class="preview-controls" aria-label="디자인 상태 미리보기">
+   <div><strong>화면 살펴보기</strong><p>예시 데이터로 디자인과 반응을 확인해요. 실제 경기는 진행되지 않습니다.</p></div>
+   <label for="preview-state">화면 상태</label><select id="preview-state"></select>
+   <label class="preview-motion"><input id="preview-motion" type="checkbox" checked> 3D 움직임</label>
+  </section>
+  <p class="preview-event" id="preview-event" role="status">Blender 원본과 Three.js 화면은 game-design 폴더에 준비되어 있어요.</p>
+ </main>
+ <footer class="preview-footer"><span>HAMMI PLAY <i>손끝에서 시작되는 작은 즐거움.</i></span><a href="./HANDOFF.md">개발 연결 안내 ↗</a></footer>
+ <dialog id="preview-dialog"><button id="dialog-close" aria-label="안내 닫기">×</button><div id="dialog-body"></div></dialog>
+ <script type="module" src="demo.js"></script>
+</body></html>
