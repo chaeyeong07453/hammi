@@ -139,7 +139,7 @@
   route('rank', (app, rest) => {
     const me = Auth.current();
     let key = RANK_KEYS.some(k => k[0] === rest[0]) ? rest[0] : 'word';
-    header(app, '🏆 랭킹', '이 컴퓨터에서 연습한 사람들의 최고 기록이에요.');
+    header(app, '🏆 랭킹');
     const card = el('div', 'card');
     app.appendChild(card);
     function draw() {
@@ -152,7 +152,7 @@
         ${list.length ? `<table class="rank-table"><tbody>${list.map((r, i) => `<tr class="${me && r.id === me.id ? 'me' : ''}"><td class="pos">${medal(i)}</td><td class="name">👤 ${esc(r.id)}${me && r.id === me.id ? ' <small>(나)</small>' : ''}</td><td class="val">${fmt(r.val)}</td></tr>`).join('')}</tbody></table>`
           : `<p class="muted center" style="padding:20px">아직 기록이 없어요. 연습을 마치면 여기에 이름이 올라가요!</p>`}
         ${!me ? `<div class="btn-row"><a class="btn big accent" href="#/login">👤 로그인하고 내 기록 올리기</a></div>` : ''}
-        <p class="muted center" style="font-size:.85rem">타수 기록은 정확도 80% 이상일 때만 올라가요.</p>`;
+        `;
       card.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { key = b.dataset.k; history.replaceState(null, '', '#/rank/' + key); draw(); });
     }
     draw();
