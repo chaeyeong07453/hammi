@@ -199,10 +199,10 @@
 
   /* ---------- 홈과 연습 둘러보기 ---------- */
   const courses = [
-    { route: 'keys', name: '자리연습', desc: '손가락을 어디에 둘까요?<br> 글쇠 하나부터 차근차근.', icon: 'keyboard', tone: 'peach', detail: '자판과 친해지기' },
-    { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br> 익숙한 낱말로 가볍게.', icon: 'type', tone: 'sage', detail: '낱말 15개씩' },
-    { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br> 한 줄씩 따라 써요.', icon: 'lines', tone: 'lavender', detail: '문장 10개씩' },
-    { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br> 타자의 즐거움을 길게.', icon: 'book', tone: 'sand', detail: '내 글로도 연습 가능' }
+    { route: 'keys', name: '자리연습', desc: '손가락을 어디에 둘까요?<br> 글쇠 하나부터 차근차근.', icon: 'keyboard', tone: 'orchid', detail: '자판과 친해지기' },
+    { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br> 익숙한 낱말로 가볍게.', icon: 'type', tone: 'lilac', detail: '낱말 15개씩' },
+    { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br> 한 줄씩 따라 써요.', icon: 'lines', tone: 'sky', detail: '문장 10개씩' },
+    { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br> 타자의 즐거움을 길게.', icon: 'book', tone: 'mint', detail: '내 글로도 연습 가능' }
   ];
   function courseCards() {
     return `<div class="course-grid">${courses.map((c, i) => `
@@ -244,7 +244,7 @@
           <p class="hero-note">${icon('check')} ${u ? `지금까지 ${u.count || 0}번의 연습을 함께했어요` : '가입 없이도 바로 연습할 수 있어요'}</p>
         </div>
         <div class="hero-visual">
-          <img src="assets/typing-still-life.jpg" width="1536" height="1024" alt="따뜻한 햇살 아래 크림색 키보드와 작은 테라코타 화분" fetchpriority="high">
+          <img src="assets/typing-rainbow.jpg" width="1536" height="1024" alt="파스텔 무지개색 키보드와 민트색 화분이 놓인 밝은 책상" fetchpriority="high">
           <span class="image-caption">A LITTLE PRACTICE, EVERY DAY.</span>
           <div class="hero-sticker"><span class="sticker-icon">${icon('leaf')}</span><span>잘하는 것보다 중요한 건,<br><strong>오늘도 해보는 마음.</strong></span></div>
         </div>
