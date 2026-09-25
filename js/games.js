@@ -44,16 +44,19 @@
     app.appendChild(card);
     const area = $('#area'), input = $('#inp');
     const PARAMS = { slow: { fall: 30000, spawn: 4500, max: 5 }, normal: { fall: 19000, spawn: 3200, max: 6 }, fast: { fall: 12000, spawn: 2300, max: 7 } };
-    let words = [], lives = 5, score = 0, missed = 0, raf = null, spawnTimer = null, last = 0, running = false, p;
+    let words = [], lives = 5, score = 0, missed = 0, raf = null, spawnTimer = null, last = 0, running = false, p, seen = new Set();
 
     const drawLives = () => { $('#lives').textContent = '❤️'.repeat(lives) + '🤍'.repeat(5 - lives); };
     drawLives();
 
     function spawn() {
       if (!running || words.length >= p.max) return;
+      // 화면에 있거나 이번 판에 이미 나온 낱말은 제외. 다 쓰면 처음부터 다시
       const onScreen = new Set(words.map(w => w.text));
-      const cand = DATA.gameWords.filter(w => !onScreen.has(w));
+      let cand = DATA.gameWords.filter(w => !onScreen.has(w) && !seen.has(w));
+      if (!cand.length) { seen.clear(); cand = DATA.gameWords.filter(w => !onScreen.has(w)); }
       const text = cand[Math.floor(Math.random() * cand.length)];
+      seen.add(text);
       const e = el('div', 'rain-word', esc(text));
       area.appendChild(e);
       const x = Math.random() * Math.max(0, area.clientWidth - e.offsetWidth - 20) + 10;
