@@ -77,7 +77,7 @@
     const hash = location.hash.replace(/^#\/?/, '') || 'home';
     const [name, ...rest] = hash.split('/');
     const app = $('#app');
-    const group = ['words', 'sentences', 'long', 'practice'].includes(name) ? 'practice' : ['rain', 'mole', 'games'].includes(name) ? 'games' : name;
+    const group = ['words', 'sentences', 'long', 'practice'].includes(name) ? 'practice' : ['rain', 'mole', 'race', 'tennis', 'games'].includes(name) ? 'games' : name;
     document.querySelectorAll('[data-nav]').forEach(link => {
       if (link.dataset.nav === group) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
@@ -221,6 +221,14 @@
         <div class="game-copy"><span class="eyebrow">손끝으로 쏙쏙</span><h3>낱말 두더지</h3><p>쏙 올라오는 낱말을 톡!<br>45초 동안 가볍게 즐겨요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
         <div class="mole-art" aria-hidden="true"><div class="mole-shadow"></div><div class="mini-mole"><i class="mole-ear left"></i><i class="mole-ear right"></i><i class="mole-eye left"></i><i class="mole-eye right"></i><i class="mole-nose"></i><span class="mole-key">감</span></div><span class="mole-spark">✦</span></div>
       </a>
+      <a class="game-card race-card" href="#/race">
+        <div class="game-copy"><span class="eyebrow">함께 달리는 3D</span><h3>단어 드라이브</h3><p>다가오는 자동차의 단어를 먼저!<br>최대 3명이 같은 도로에서 만나요.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
+        <div class="race-art" aria-hidden="true"><span class="race-road"></span><span class="race-sign">햇살</span><span class="race-car"></span></div>
+      </a>
+      <a class="game-card tennis-card" href="#/tennis">
+        <div class="game-copy"><span class="eyebrow">한 단어씩 주고받는 3D</span><h3>끝말 테니스</h3><p>끝 글자로 낱말을 이어 공을 받아쳐요.<br>컴퓨터 또는 친구와 함께.</p><span class="game-link">게임 시작 ${icon('arrow')}</span></div>
+        <div class="tennis-art" aria-hidden="true"><span class="tennis-court"></span><span class="tennis-ball"></span><span class="tennis-word">소나<b>기</b></span></div>
+      </a>
     </div>`;
   }
   function guideContent() {
@@ -232,7 +240,7 @@
   }
   route('home', app => {
     const u = records.user();
-    const recordItems = [['word', '낱말연습', '타/분'], ['sentence', '짧은글', '타/분'], ['long', '긴글', '타/분'], ['rain', '낱말비', '점'], ['mole', '낱말 두더지', '점']];
+    const recordItems = [['word', '낱말연습', '타/분'], ['sentence', '짧은글', '타/분'], ['long', '긴글', '타/분'], ['rain', '낱말비', '점'], ['mole', '낱말 두더지', '점'], ['race', '단어 드라이브', '점'], ['tennis', '끝말 테니스', '랠리']];
     app.innerHTML = `
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
