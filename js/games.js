@@ -43,7 +43,7 @@
       <input class="type-input" id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="낱말을 치고 엔터 (다 치면 자동)" style="margin-top:12px" disabled>`;
     app.appendChild(card);
     const area = $('#area'), input = $('#inp');
-    const PARAMS = { slow: { fall: 30000, spawn: 4500, max: 5 }, normal: { fall: 19000, spawn: 3200, max: 6 }, fast: { fall: 12000, spawn: 2300, max: 7 } };
+    const PARAMS = { slow: { fall: 18000, spawn: 3600, max: 5 }, normal: { fall: 12000, spawn: 2600, max: 6 }, fast: { fall: 7000, spawn: 1800, max: 7 } };
     let words = [], lives = 5, score = 0, missed = 0, raf = null, spawnTimer = null, last = 0, running = false, p, seen = new Set();
 
     const drawLives = () => { $('#lives').textContent = '❤️'.repeat(lives) + '🤍'.repeat(5 - lives); };
