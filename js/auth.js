@@ -112,7 +112,7 @@
         card.innerHTML = tabs + `
           <h2>나만의 연습 기록을 시작해요.</h2>
           <p class="lead">이름과 숫자 네 자리 비밀번호만 있으면 돼요. 전화번호나 이메일은 필요 없어요.</p>
-          <div class="form-row"><label for="uid">이름 (부르는 이름이면 돼요)</label><input class="text-input" id="uid" type="text" maxlength="10" placeholder="예) 순자, 영수, 봄날" autocomplete="off"></div>
+          <div class="form-row"><label for="uid">이름 (부르는 이름이면 돼요)</label><input class="text-input" id="uid" type="text" maxlength="10" placeholder="예) 채영, 채민" autocomplete="off"></div>
           <div class="form-row"><label for="pin">비밀번호 (숫자 4자리)</label><input class="text-input pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
           <div class="form-row"><label for="pin2">비밀번호 한 번 더</label><input class="text-input pin" id="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
           <div class="form-msg" id="msg"></div>
