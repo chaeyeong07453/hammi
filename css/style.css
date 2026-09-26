@@ -324,3 +324,9 @@ html:not([data-size="normal"]) .game-grid { grid-template-columns: 1fr; }
 .play-code { font-size: 2.2rem; font-weight: 900; letter-spacing: .3em; text-align: center; color: #7152aa; background: #f4f0fb; border-radius: 14px; padding: 10px; }
 .play-link { word-break: break-all; background: #f7f5fb; border-radius: 10px; padding: 8px 12px; font-size: .85rem; }
 @media (max-width: 720px) { .race-art, .tennis-art { transform: scale(.75); transform-origin: right top; right: 0; } }
+
+/* 함께 보는 글: 고치기/지우기 */
+.text-btn .acts { position: absolute; top: 10px; right: 12px; display: flex; gap: 6px; }
+.text-btn .acts .del { position: static; }
+.text-btn .del.edit:hover { background: #eaf2fb; color: var(--primary); }
+.text-btn.shared.mine { border-color: #9f86e6; }
