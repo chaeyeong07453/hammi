@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const ASSETS = new URL('./models/', import.meta.url);
 const COLORS = ['#b9a7f9', '#b9ebea', '#f6c8ad'];
+const TONES = { lilac: '#b9a7f9', mint: '#b9ebea', peach: '#f6c8ad' };
+function paint(root, color) { root.traverse(o => { if (o.isMesh && o.material && o.material.name === 'CarPaint') o.material.color.set(color); }); }
 function release(...roots) {
   const geometries = new Set(), materials = new Set();
   roots.filter(Boolean).forEach(root => root.traverse(o => {
@@ -24,7 +26,7 @@ function prepare(root, color) {
 export class GameScene {
   constructor(container, game, { onAnchors = () => {}, onReady = () => {}, onError = () => {} } = {}) {
     this.container = container; this.game = game; this.onAnchors = onAnchors;
-    this.state = {}; this.time = 0; this.last = 0; this.cars = []; this.effects = [];
+    this.state = {}; this.time = 0; this.last = 0; this.cars = []; this.discs = []; this.effects = [];
     this.disposed = false; this.visible = true; this.ready = false;
     this.motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
     this.scene = new THREE.Scene();
@@ -95,9 +97,23 @@ export class GameScene {
     this.state = state;
     if (!this.ready) return;
     if (this.game === 'race') {
-      const targets = state.targets || [];
-      while (this.cars.length < targets.length) { const car = prepare(this.prototype.clone(true), COLORS[this.cars.length % 3]); car.scale.setScalar(1.22); this.scene.add(car); this.cars.push(car); }
-      this.cars.forEach((car, i) => { car.visible = Boolean(targets[i] && !targets[i].claimedBy); });
+      // 참가자의 자동차는 도로 앞쪽에 세워 두고, 다가오는 낱말은 둥근 공으로 표시한다
+      const players = state.players || [], targets = state.targets || [];
+      while (this.cars.length < players.length) { const car = prepare(this.prototype.clone(true), COLORS[this.cars.length % 3]); car.scale.setScalar(1.22); car.rotation.y = Math.PI; car.userData.color = COLORS[this.cars.length % 3]; this.scene.add(car); this.cars.push(car); }
+      this.cars.forEach((car, i) => {
+        const p = players[i]; car.visible = Boolean(p);
+        if (!p) return;
+        const color = TONES[p.color] || COLORS[i % 3];
+        if (car.userData.color !== color) { paint(car, color); car.userData.color = color; }
+        const lane = players.length === 1 ? 1 : i % 3;
+        car.position.set(lane * 3.5 - 3.5, .16, 1.8);
+      });
+      if (!this.discGeometry) this.discGeometry = new THREE.SphereGeometry(.95, 28, 18);
+      while (this.discs.length < targets.length) {
+        const mesh = new THREE.Mesh(this.discGeometry, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .55, metalness: 0 }));
+        mesh.castShadow = true; this.scene.add(mesh); this.discs.push(mesh);
+      }
+      this.discs.forEach((d, i) => { const t = targets[i]; d.visible = Boolean(t && !t.claimedBy); if (t) d.material.color.set(COLORS[(t.lane ?? i) % 3]); });
     }
     this.invalidate();
   }
@@ -107,7 +123,7 @@ export class GameScene {
   }
   playEffect(kind, targetId) {
     if (!this.ready) return;
-    const target = this.game === 'race' ? this.cars[(this.state.targets || []).findIndex(t => t.id === targetId)] : this.ball;
+    const target = this.game === 'race' ? this.discs[(this.state.targets || []).findIndex(t => t.id === targetId)] : this.ball;
     const origin = target ? target.position.clone().add(new THREE.Vector3(0, 1.6, 0)) : new THREE.Vector3(0, 2, 0);
     if (this.motionQuery.matches) return;
     for (let i = 0; i < 10; i++) {
@@ -129,15 +145,21 @@ export class GameScene {
         this.dashTransform.updateMatrix(); this.dashes.setMatrixAt(i, this.dashTransform.matrix);
       }
       this.dashes.instanceMatrix.needsUpdate = true;
-      const anchors = [];
+      const anchors = [], drivers = [];
       (this.state.targets || []).forEach((target, i) => {
-        const car = this.cars[i]; if (!car) return;
+        const disc = this.discs[i]; if (!disc) return;
         const z = Number.isFinite(target.z) ? target.z : [-1, -11, -5][i % 3];
         const displayZ = this.state.previewMotion ? ((z + 24 + this.time * 1.4) % 30) - 24 : z;
-        car.position.set((target.lane ?? i % 3) * 3.5 - 3.5, .16 + Math.sin(this.time * 2 + i) * .015, displayZ);
-        anchors.push({ id: target.id, ...this.project(car.position.clone().add(new THREE.Vector3(0, 2.95, 0))) });
+        disc.position.set((target.lane ?? i % 3) * 3.5 - 3.5, 1.05 + Math.sin(this.time * 3 + i) * .08, displayZ);
+        disc.rotation.y = this.time * .8 + i;
+        anchors.push({ id: target.id, ...this.project(disc.position.clone().add(new THREE.Vector3(0, 1.75, 0))) });
       });
-      this.onAnchors(anchors);
+      (this.state.players || []).forEach((p, i) => {
+        const car = this.cars[i]; if (!car || !car.visible) return;
+        car.position.y = .16 + Math.sin(this.time * 2 + i) * .012;
+        drivers.push({ id: p.id, ...this.project(car.position.clone().add(new THREE.Vector3(0, 2.7, 0))) });
+      });
+      this.onAnchors(anchors, drivers);
     } else if (this.ready && this.game === 'tennis') {
       if (this.state.ballPosition) this.ball.position.fromArray(this.state.ballPosition);
       else {
@@ -161,6 +183,7 @@ export class GameScene {
     this.resizeObserver?.disconnect(); this.visibilityObserver?.disconnect();
     if (this.motionChange) this.motionQuery.removeEventListener('change', this.motionChange);
     if (this.documentVisibility) document.removeEventListener('visibilitychange', this.documentVisibility);
+    this.discGeometry?.dispose();
     release(this.scene, this.prototype); this.renderer?.dispose(); this.renderer?.domElement.remove();
   }
 }

@@ -177,3 +177,23 @@
 /* Lobby actions remain visible without scrolling inside the 3D stage. */
 .game-design[data-phase="lobby"] .gd-stage{height:570px;}
 @media(max-width:600px){.game-design[data-phase="lobby"] .gd-stage{height:570px;}.game-design[data-phase="result"] .gd-stage{height:480px;}}
+
+/* 단어 드라이브: 둥근 낱말 표지, 세워 둔 자동차 이름표, 빠르기 선택 */
+.gd-word-sign.is-round{min-width:0;width:104px;height:104px;padding:0;border-radius:50%;justify-content:center;gap:0;}
+.gd-word-sign.is-round>span{font-size:11px;line-height:1.2;}
+.gd-word-sign.is-round strong{font-size:26px;line-height:1.2;}
+.gd-word-sign.is-round i{display:none;}
+.gd-word-sign.kind-phrase,.gd-word-sign.kind-sentence{border-radius:40px;padding:6px 20px 9px;white-space:normal;}
+.gd-word-sign.kind-phrase strong{font-size:22px;max-width:240px;}
+.gd-word-sign.kind-sentence strong{font-size:19px;max-width:300px;line-height:1.35;}
+.gd-word-sign.kind-word:not(.is-round) strong{font-size:25px;}
+.gd-driver-layer{position:absolute;inset:0;pointer-events:none;z-index:2;}
+.gd-driver-tag{position:absolute;transform:translate(-50%,-100%);display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:#fffffff2;border:2px solid #d5c6fa;font-size:14px;font-weight:700;color:#453956;box-shadow:0 3px 10px #43315426;white-space:nowrap;max-width:150px;}
+.gd-driver-tag b{overflow:hidden;text-overflow:ellipsis;}
+.gd-driver-tag em{font-style:normal;font-size:11px;padding:1px 6px;border-radius:999px;background:#7152aa;color:#fff;}
+.gd-driver-tag.gd-driver-mint{border-color:#8fd9d7;}.gd-driver-tag.gd-driver-peach{border-color:#f0ad86;}
+.gd-driver-tag.is-me{background:#efe9ff;border-color:#9f88e6;}
+.gd-overlay-card .gd-speed{text-align:center;margin:14px auto 4px;}
+.gd-overlay-card .gd-speed>span{margin-bottom:6px;}
+.gd-overlay-card .gd-speed .gd-segment{display:inline-flex;}
+@media(max-width:600px){.gd-word-sign.is-round{width:88px;height:88px;}.gd-word-sign.is-round strong{font-size:22px;}.gd-word-sign.kind-phrase strong{font-size:19px;max-width:190px;}.gd-word-sign.kind-sentence strong{font-size:16px;max-width:230px;}.gd-driver-tag{font-size:12px;padding:3px 9px;max-width:110px;}}

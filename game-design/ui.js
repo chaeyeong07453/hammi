@@ -27,6 +27,7 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
     <div class="gd-load" data-ui="loading"><span class="gd-loader"></span>작은 경기장을 준비하고 있어요</div>
     <div class="gd-stage-top"><span class="gd-location">${icon('leaf')} ${c.scene}</span><div><button class="gd-icon-btn" data-action="help" aria-label="게임 방법 보기">${icon('info')}</button><button class="gd-icon-btn" data-action="fullscreen" aria-label="경기장 크게 보기">${icon('expand')}</button></div></div>
     <div class="gd-word-layer" data-ui="words"></div>
+    <div class="gd-driver-layer" data-ui="drivers"></div>
     <div class="gd-court-word" data-ui="courtword"></div>
     <div class="gd-scene-footer"><span>${icon(c.icon)} ${game==='race'?'모두에게 같은 단어가 보여요':'한 단어가, 다음 공이 돼요'}</span><span>HAMMI PLAY</span></div>
     <div class="gd-feedback" data-ui="feedback" role="status" aria-live="polite"></div>
@@ -48,9 +49,11 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
   $('modes').innerHTML=(game==='race'?[[1,'1명'],[2,'2명'],[3,'3명']]:[['computer','컴퓨터'],['friend','친구와']]).map(([v,label])=>`<button type="button" data-action="mode" data-value="${v}" class="${(game==='race'?current.playerCount:current.opponent)===v?'is-selected':''}" aria-pressed="${(game==='race'?current.playerCount:current.opponent)===v}">${label}</button>`).join('');
   $('matchbar').innerHTML=`<div class="gd-competitors">${renderPlayers()}</div><div class="gd-timer ${current.phase==='urgent'?'is-urgent':''}">${icon('clock')}<div><span>${game==='race'?'남은 시간':current.turn==='me'?'받아칠 시간':'상대의 차례'}</span><strong>${game==='race'?time(current.remaining):current.seconds+'<small>초</small>'}</strong></div></div>`;
   if(game==='race') {
-   $('words').innerHTML=current.targets.map(t=>`<div class="gd-word-sign ${t.claimedBy?'is-claimed':''}" data-target="${esc(t.id)}" ${t.claimedBy?'hidden':''}><span>${esc(t.points)}점</span><strong>${esc(t.word)}</strong><i></i></div>`).join('');
+   const kindOf=t=>t.kind||(/\s/.test(t.word)?(t.word.length>12?'sentence':'phrase'):'word');
+   $('words').innerHTML=current.targets.map(t=>{const k=kindOf(t);return `<div class="gd-word-sign kind-${k} ${k==='word'&&t.word.length<=3?'is-round':''} ${t.claimedBy?'is-claimed':''}" data-target="${esc(t.id)}" ${t.claimedBy?'hidden':''}><span>${esc(t.points)}점</span><strong>${esc(t.word)}</strong><i></i></div>`;}).join('');
+   $('drivers').innerHTML=current.players.map(p=>`<div class="gd-driver-tag gd-driver-${esc(p.color)} ${p.id==='me'?'is-me':''}" data-player="${esc(p.id)}"><b>${esc(p.name)}</b>${p.id==='me'?'<em>나</em>':''}</div>`).join('');
    $('courtword').hidden=true;
-   $('side').innerHTML=`<section class="gd-side-card"><div class="gd-side-title">${icon('cup')}<h2>지금의 레이스</h2><span class="gd-live-dot" aria-hidden="true"></span></div><p class="gd-side-sub">${current.players.length===1?'나의 속도로 달려요':current.players.length+'명이 함께 달리고 있어요'}</p><div class="gd-leaderboard">${[...current.players].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="gd-rank ${p.id==='me'?'is-me':''}"><span class="gd-rank-number">${i+1}</span>${avatar(p.color,p.name)}<div><strong>${esc(p.name)}${p.id==='me'&&p.name!=='나'?' <small>나</small>':''}</strong><div class="gd-rank-track"><i style="width:${Math.max(4,Math.min(100,p.score/500*100))}%" class="gd-fill-${esc(p.color)}"></i></div></div><b>${esc(p.score)}<small>점</small></b></div>`).join('')}</div><div class="gd-rule">${icon('sparkle')} 먼저 입력한 한 사람이 획득!</div></section><section class="gd-side-card gd-round-info"><span class="gd-eyebrow">오늘의 작은 도전</span><strong>한 단어 더, 한 걸음 더.</strong><p>같은 길을 달려도<br>나만의 속도로 즐겨요.</p><div class="gd-route-decoration" aria-hidden="true"><span></span><span></span><span></span>${icon('car')}</div></section>`;
+   $('side').innerHTML=`<section class="gd-side-card"><div class="gd-side-title">${icon('cup')}<h2>지금의 레이스</h2><span class="gd-live-dot" aria-hidden="true"></span></div><p class="gd-side-sub">${current.players.length===1?'나의 속도로 달려요':current.players.length+'명이 함께 달리고 있어요'}</p><div class="gd-leaderboard">${[...current.players].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="gd-rank ${p.id==='me'?'is-me':''}"><span class="gd-rank-number">${i+1}</span>${avatar(p.color,p.name)}<div><strong>${esc(p.name)}${p.id==='me'&&p.name!=='나'?' <small>나</small>':''}</strong><div class="gd-rank-track"><i style="width:${Math.max(4,Math.min(100,p.score/800*100))}%" class="gd-fill-${esc(p.color)}"></i></div></div><b>${esc(p.score)}<small>점</small></b></div>`).join('')}</div><div class="gd-rule">${icon('sparkle')} 먼저 입력한 한 사람이 획득!<br><small>낱말 10·20점 · 구 30점 · 문장 50점</small></div></section><section class="gd-side-card gd-round-info"><span class="gd-eyebrow">오늘의 작은 도전</span><strong>한 단어 더, 한 걸음 더.</strong><p>같은 길을 달려도<br>나만의 속도로 즐겨요.</p><div class="gd-route-decoration" aria-hidden="true"><span></span><span></span><span></span>${icon('car')}</div></section>`;
   } else {
    $('words').innerHTML='';$('courtword').hidden=false;
    const last=current.chain.at(-1)||'';
@@ -75,7 +78,7 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
  function renderOverlay() {
   const ov=$('overlay');ov.setAttribute('role','region');ov.setAttribute('aria-label','경기 상태');
   let content='';
-  if(current.phase==='lobby')content=`<div class="gd-overlay-emblem">${icon(c.icon)}</div><span class="gd-eyebrow">함께할 준비 되셨나요?</span><h2>${game==='race'?'우리, 같이 달려요.':'가볍게 한 게임 칠까요?'}</h2><p>${game==='race'?'최대 3명이 같은 도로에서 만나요.':'컴퓨터와 연습하거나 친구와 랠리를 즐겨요.'}</p><div class="gd-lobby-players">${current.players.map(p=>`<div>${avatar(p.color,p.name)}<strong>${esc(p.name)}</strong><span class="${p.ready?'is-ready':''}">${p.ready?'준비 완료':'기다리는 중'}</span></div>`).join('')}</div>${(game==='race'?current.playerCount>1:current.opponent==='friend')?`<div class="gd-room-code"><span>초대 코드</span><strong>${esc(current.roomCode)}</strong><button class="gd-button" data-action="invite">${icon('link')} 초대하기</button></div>`:''}<button class="gd-button gd-primary" data-action="ready">${icon('check')} 준비하고 시작하기</button>`;
+  if(current.phase==='lobby')content=`<div class="gd-overlay-emblem">${icon(c.icon)}</div><span class="gd-eyebrow">함께할 준비 되셨나요?</span><h2>${game==='race'?'우리, 같이 달려요.':'가볍게 한 게임 칠까요?'}</h2><p>${game==='race'?'최대 3명이 같은 도로에서 만나요.':'컴퓨터와 연습하거나 친구와 랠리를 즐겨요.'}</p><div class="gd-lobby-players">${current.players.map(p=>`<div>${avatar(p.color,p.name)}<strong>${esc(p.name)}</strong><span class="${p.ready?'is-ready':''}">${p.ready?'준비 완료':'기다리는 중'}</span></div>`).join('')}</div>${game==='race'?`<div class="gd-mode gd-speed" role="group" aria-label="달리는 빠르기"><span>달리는 빠르기</span><div class="gd-segment">${[['slow','느리게'],['normal','보통'],['fast','빠르게']].map(([v,l])=>`<button type="button" data-action="speed" data-value="${v}" class="${(current.speed||'normal')===v?'is-selected':''}" aria-pressed="${(current.speed||'normal')===v}">${l}</button>`).join('')}</div></div>`:''}${(game==='race'?current.playerCount>1:current.opponent==='friend')?`<div class="gd-room-code"><span>초대 코드</span><strong>${esc(current.roomCode)}</strong><button class="gd-button" data-action="invite">${icon('link')} 초대하기</button></div>`:''}<button class="gd-button gd-primary" data-action="ready">${icon('check')} 준비하고 시작하기</button>`;
   if(current.phase==='countdown')content=`<span class="gd-eyebrow">손끝을 가볍게 준비해요</span><div class="gd-countdown">${esc(current.countdown ?? 3)}</div><h2>곧 시작해요!</h2><p>${game==='race'?'단어를 보고, 입력하고, Enter.':'끝 글자를 보고, 낱말을 잇고, Enter.'}</p>`;
   if(current.phase==='paused')content=`<div class="gd-overlay-emblem">${icon('pause')}</div><h2>잠깐, 쉬어 가요.</h2><p>손목을 가볍게 풀고<br>준비되면 다시 이어가요.</p><button class="gd-button gd-primary" data-action="resume">${icon('play')} 이어 하기</button><button class="gd-leave" data-action="leave">경기 나가기</button>`;
   if(current.phase==='reconnecting')content=`<div class="gd-overlay-emblem">${icon('users')}</div><h2>다시 만나는 중이에요.</h2><p>연결 상태를 확인하고 있어요.<br>잠시만 기다려 주세요.</p><button class="gd-button" data-action="reconnect">다시 연결하기 ${icon('reset')}</button>`;
@@ -84,8 +87,11 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
   if(current.phase==='lobby'&&(game==='race'?current.playerCount>1:current.opponent==='friend'))content+=`<button class="gd-leave gd-find-match" data-action="find-opponent">${icon('users')} 새로운 상대 찾기</button>`;
   ov.innerHTML=`<div class="gd-overlay-card">${content}</div>`;
  }
- function placeWords(anchors) {
-  const placed=[],width=$('stage').clientWidth;
+ function placeWords(anchors,drivers=[]) {
+  const width=$('stage').clientWidth;
+  const tags=new Map([...$('drivers').children].map(el=>[el.dataset.player,el]));
+  drivers.forEach(d=>{const el=tags.get(d.id);if(!el)return;const w=el.offsetWidth;el.style.left=Math.max(w/2+6,Math.min(width-w/2-6,d.x))+'px';el.style.top=d.y+'px';el.style.visibility=d.visible?'visible':'hidden';});
+  const placed=[];
   const elements=new Map([...$('words').children].map(el=>[el.dataset.target,el]));
   // Keep the actual words in HTML, readable at every distance. Stagger nearby labels.
   [...anchors].sort((a,b)=>b.y-a.y).forEach(a=>{
@@ -110,6 +116,7 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
   if(action==='fullscreen') {try {if(document.fullscreenElement)await document.exitFullscreen();else await root.querySelector('.gd-arena').requestFullscreen();}catch{emit('fullscreen-unavailable');}return;}
   if(action==='help') {emit('help');return;}
   if(action==='mode') {emit('mode-change',game==='race'?{playerCount:Number(b.dataset.value)}:{opponent:b.dataset.value});return;}
+  if(action==='speed') {emit('speed-change',{speed:b.dataset.value});return;}
   emit(action);
  },options);
  $('input').addEventListener('compositionstart',()=>{composing=true;},options);
