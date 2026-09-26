@@ -199,9 +199,9 @@
 
   /* ---------- 홈과 연습 둘러보기 ---------- */
   const courses = [
-    { route: 'words', name: '낱말연습', desc: '봄, 가족, 안녕하세요.<br> 익숙한 낱말로 가볍게.', icon: 'type', tone: 'lilac', detail: '낱말 15개씩' },
-    { route: 'sentences', name: '짧은글연습', desc: '마음에 남는 한마디를<br> 한 줄씩 따라 써요.', icon: 'lines', tone: 'sky', detail: '문장 10개씩' },
-    { route: 'long', name: '긴글연습', desc: '좋아하는 시와 이야기로<br> 타자의 즐거움을 길게.', icon: 'book', tone: 'mint', detail: '내 글로도 연습 가능' }
+    { route: 'words', name: '낱말 연습', desc: '봄, 가족, 안녕하세요.<br> 익숙한 낱말로 가볍게.', icon: 'type', tone: 'lilac', detail: '낱말 15개씩' },
+    { route: 'sentences', name: '짧은 글 연습', desc: '마음에 남는 한마디를<br> 한 줄씩 따라 써요.', icon: 'lines', tone: 'sky', detail: '문장 10개씩' },
+    { route: 'long', name: '긴 글 연습', desc: '좋아하는 시와 이야기로<br> 타자의 즐거움을 길게.', icon: 'book', tone: 'mint', detail: '내 글로도 연습 가능' }
   ];
   function courseCards() {
     return `<div class="course-grid">${courses.map((c, i) => `
@@ -240,7 +240,7 @@
   }
   route('home', app => {
     const u = records.user();
-    const recordItems = [['word', '낱말연습', '타/분'], ['sentence', '짧은글', '타/분'], ['long', '긴글', '타/분'], ['rain', '낱말비', '점'], ['mole', '낱말 두더지', '점'], ['race', '단어 드라이브', '점'], ['tennis', '끝말 테니스', '랠리']];
+    const recordItems = [['word', '낱말 연습', '타/분'], ['sentence', '짧은 글', '타/분'], ['long', '긴 글', '타/분'], ['rain', '낱말비', '점'], ['mole', '낱말 두더지', '점'], ['race', '단어 드라이브', '점'], ['tennis', '끝말 테니스', '랠리']];
     app.innerHTML = `
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
@@ -256,7 +256,7 @@
           <div class="hero-sticker"><span class="sticker-icon">${icon('leaf')}</span><span>잘하는 것보다 중요한 건,<br><strong>오늘도 해보는 마음.</strong></span></div>
         </div>
       </section>
-      <div class="welcome-strip"><span class="welcome-icon">${icon('keyboard')}</span><p><strong>처음이어도 괜찮아요.</strong><span> 낱말연습부터 한 걸음씩 함께해요.</span></p><a href="#/words">첫 연습 시작 ${icon('arrow')}</a></div>
+      <div class="welcome-strip"><span class="welcome-icon">${icon('keyboard')}</span><p><strong>처음이어도 괜찮아요.</strong><span> 낱말 연습부터 한 걸음씩 함께해요.</span></p><a href="#/words">첫 연습 시작 ${icon('arrow')}</a></div>
       <section class="home-section" aria-labelledby="practice-title">
         <div class="section-heading"><div><span class="eyebrow">기초부터 차근차근</span><h2 id="practice-title">어디부터 시작할까요?</h2></div><span class="section-aside">내게 맞는 연습을 골라 보세요.</span></div>
         ${courseCards()}
@@ -273,7 +273,7 @@
       <details class="home-guide"><summary><span>${icon('bulb')} 시작 전, 이것만 알아두세요</span><span class="guide-plus" aria-hidden="true">+</span></summary>${guideContent()}</details>`;
   });
   route('practice', app => {
-    header(app, '어디부터 시작할까요?', '처음이라면 낱말연습부터. 익숙해졌다면 원하는 연습을 골라 보세요.');
+    header(app, '어디부터 시작할까요?', '처음이라면 낱말 연습부터. 익숙해졌다면 원하는 연습을 골라 보세요.');
     app.insertAdjacentHTML('beforeend', courseCards());
   });
   route('games', app => {
@@ -282,7 +282,7 @@
   });
   route('guide', app => {
     header(app, '시작은 가볍게, 내 속도로.', '키보드가 처음이어도 괜찮아요. 하나씩 함께 익혀 봐요.');
-    app.insertAdjacentHTML('beforeend', `<div class="card guide-page">${guideContent()}<div class="btn-row"><a class="btn big" href="#/words">낱말연습 시작하기 ${icon('arrow')}</a></div><p class="muted center">실제 키보드가 있는 컴퓨터에서 연습하면 더 편해요.</p></div>`);
+    app.insertAdjacentHTML('beforeend', `<div class="card guide-page">${guideContent()}<div class="btn-row"><a class="btn big" href="#/words">낱말 연습 시작하기 ${icon('arrow')}</a></div><p class="muted center">실제 키보드가 있는 컴퓨터에서 연습하면 더 편해요.</p></div>`);
   });
 
   /* ---------- 설정 패널 ---------- */

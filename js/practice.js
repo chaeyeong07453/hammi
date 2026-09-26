@@ -1,4 +1,4 @@
-/* 연습 모드: 낱말연습 / 짧은글연습 / 긴글연습 */
+/* 연습 모드: 낱말 연습 / 짧은 글 연습 / 긴 글 연습 */
 (function () {
   const { routes, $, el, shuffle, pick, esc, settings, sound, speak, route, header, statsBar, setStat, fmtTime, showResult, makeStats, paintTarget, paintHint, resetInput } = App;
 
@@ -17,10 +17,10 @@
     app.appendChild(card);
   }
 
-  // 예전 주소(#/keys)로 들어오면 낱말연습으로 보냄
+  // 예전 주소(#/keys)로 들어오면 낱말 연습으로 보냄
   route('keys', () => { location.replace('#/words'); });
 
-  /* ================= 낱말 / 짧은글 공용 ================= */
+  /* ================= 낱말 / 짧은 글 공용 ================= */
   function runTyping(app, opt) {
     const items = opt.items;
     const stats = makeStats();
@@ -102,41 +102,41 @@
     return () => clearInterval(timer);
   }
 
-  /* ================= 낱말연습 ================= */
+  /* ================= 낱말 연습 ================= */
   route('words', (app, rest) => {
     const level = rest[0];
     if (!DATA.words[level]) {
-      chooser(app, '🍎 낱말연습', '화면에 나온 낱말을 똑같이 치면 자동으로 다음 낱말로 넘어가요.', [
+      chooser(app, '🍎 낱말 연습', '화면에 나온 낱말을 똑같이 치면 자동으로 다음 낱말로 넘어가요.', [
         { href: '#/words/easy', html: `<span class="n">쉬운 낱말</span><span class="d">두세 글자의 친숙한 낱말 15개</span><span class="jm">가족 · 손주 · 김치 · 봄</span>` },
         { href: '#/words/hard', html: `<span class="n">긴 낱말</span><span class="d">받침과 겹자음이 많은 낱말 15개</span><span class="jm">된장찌개 · 감사합니다</span>` }
       ]);
       return;
     }
     return runTyping(app, {
-      title: '🍎 낱말연습 · ' + (level === 'easy' ? '쉬운 낱말' : '긴 낱말'),
+      title: '🍎 낱말 연습 · ' + (level === 'easy' ? '쉬운 낱말' : '긴 낱말'),
       lead: '낱말을 다 치면 저절로 다음으로 넘어가요. 틀리면 ← 지우기로 고쳐요.',
       items: pick(DATA.words[level], 15), recordKey: 'word', backHref: '#/words', backLabel: '낱말 고르기'
     });
   });
 
-  /* ================= 짧은글연습 ================= */
+  /* ================= 짧은 글 연습 ================= */
   route('sentences', (app, rest) => {
     const kind = rest[0];
     if (!DATA.sentences[kind]) {
-      chooser(app, '📝 짧은글연습', '한 문장을 다 치면 저절로 다음 문장으로 넘어가요. 엔터를 눌러도 넘어가요.', [
+      chooser(app, '📝 짧은 글 연습', '한 문장을 다 치면 저절로 다음 문장으로 넘어가요. 엔터를 눌러도 넘어가요.', [
         { href: '#/sentences/proverb', html: `<span class="n">속담</span><span class="d">익숙한 우리 속담 10개</span><span class="jm">티끌 모아 태산</span>` },
         { href: '#/sentences/daily', html: `<span class="n">일상 문장</span><span class="d">마침표와 물음표가 있는 생활 문장 10개</span><span class="jm">오늘 날씨가 참 좋습니다.</span>` }
       ]);
       return;
     }
     return runTyping(app, {
-      title: '📝 짧은글연습 · ' + (kind === 'proverb' ? '속담' : '일상 문장'),
+      title: '📝 짧은 글 연습 · ' + (kind === 'proverb' ? '속담' : '일상 문장'),
       lead: '띄어쓰기와 문장 부호까지 똑같이 쳐 보세요.',
       items: pick(DATA.sentences[kind], 10), recordKey: 'sentence', backHref: '#/sentences', backLabel: '글 고르기'
     });
   });
 
-  /* ================= 긴글연습 ================= */
+  /* ================= 긴 글 연습 ================= */
   /* 내 글 저장소 (localStorage) */
   const myTexts = {
     key: 'hammi.mytexts',
@@ -212,7 +212,7 @@
       <div class="form-row"><label for="my-pin">지우기 비밀번호 (숫자 4자리, 모두에게 공유할 때만)</label><input class="text-input pin" id="my-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
       <div class="form-msg" id="my-msg"></div>
       <div class="btn-row"><button class="btn big" id="my-save">이 컴퓨터에만 저장</button><button class="btn big accent" id="my-share">모두에게 공유하기</button><a class="btn big secondary" href="#/long">취소</a></div>
-      <div class="tips">붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. <b>이 컴퓨터에만 저장</b>은 나만 보고, <b>모두에게 공유하기</b>는 이 사이트에 들어오는 모든 사람의 긴글연습 목록에 바로 올라가요. 공유한 글은 올릴 때 정한 비밀번호 4자리로 지울 수 있어요.</div>`;
+      <div class="tips">붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. <b>이 컴퓨터에만 저장</b>은 나만 보고, <b>모두에게 공유하기</b>는 이 사이트에 들어오는 모든 사람의 긴 글 연습 목록에 바로 올라가요. 공유한 글은 올릴 때 정한 비밀번호 4자리로 지울 수 있어요.</div>`;
     app.appendChild(card);
     const body = $('#my-body');
     body.addEventListener('input', () => { $('#my-count').textContent = body.value.split('\n').filter(l => l.trim()).length + '줄'; });
@@ -244,7 +244,7 @@
     if (rest[0] === 'new') return customEditor(app);
     // 공유 글은 불러온 뒤 같은 화면을 다시 그림
     if (/^s\d+$/.test(rest[0] || '') && !(sharedTexts.cached() || { list: [] }).list.some(t => t.id === rest[0])) {
-      header(app, '📖 긴글연습', '', '글 고르기'); $('.practice-head a', app).href = '#/long';
+      header(app, '📖 긴 글 연습', '', '글 고르기'); $('.practice-head a', app).href = '#/long';
       app.insertAdjacentHTML('beforeend', '<div class="card center muted" id="loading">글을 불러오는 중이에요…</div>');
       let alive = true;
       sharedTexts.find(rest[0]).then(t => { if (!alive) return; if (t) { app.innerHTML = ''; routes.long(app, rest); } else $('#loading').textContent = '이 글을 찾을 수 없어요. 지워졌을 수 있어요.'; })
@@ -255,7 +255,7 @@
     if (!text) {
       const mine = myTexts.all();
       const item = t => ({ cls: 'text-btn', href: '#/long/' + t.id, html: `<span class="t">${esc(t.title)}</span> <span class="a">${esc(t.author)}</span><span class="preview">${esc(t.lines.find(l => l) || '')}</span>` });
-      header(app, '📖 긴글연습', '시와 이야기를 한 줄씩 따라 쳐요. 한 줄을 다 치면 다음 줄로 넘어가요.');
+      header(app, '📖 긴 글 연습', '시와 이야기를 한 줄씩 따라 쳐요. 한 줄을 다 치면 다음 줄로 넘어가요.');
       const my = el('div', 'card');
       my.innerHTML = `<h2>내 글</h2><p class="lead">좋아하는 노래 가사나 시를 직접 넣어 연습할 수 있어요.</p><div class="text-list" id="my-list"></div>`;
       const ml = $('#my-list', my);
