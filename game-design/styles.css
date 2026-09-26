@@ -211,3 +211,8 @@
 .gd-overlay-card .gd-speed>span{margin-bottom:6px;}
 .gd-overlay-card .gd-speed .gd-segment{display:inline-flex;}
 @media(max-width:600px){.gd-word-sign.is-round{width:88px;height:88px;}.gd-word-sign.is-round strong{font-size:22px;}.gd-word-sign.kind-phrase strong{font-size:19px;max-width:190px;}.gd-word-sign.kind-sentence strong{font-size:16px;max-width:230px;}.gd-driver-tag{font-size:12px;padding:3px 9px;max-width:110px;}}
+
+/* 테니스: 여러 명일 때 지금 차례인 사람 강조 */
+.game-design[data-game="tennis"] .gd-competitor.is-turn strong {color:#7152aa;}
+.game-design[data-game="tennis"] .gd-competitor.is-turn .gd-avatar {box-shadow:0 0 0 3px #b9a7f9;border-radius:50%;}
+@media(max-width:600px){.game-design[data-game="tennis"] .gd-competitors{flex-wrap:wrap;gap:10px;}}

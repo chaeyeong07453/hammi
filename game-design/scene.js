@@ -77,8 +77,9 @@ export class GameScene {
       this.dashTransform = new THREE.Object3D();
     } else {
       this.players = [prepare(this.prototype.clone(true), COLORS[0]), prepare(this.prototype.clone(true), COLORS[2])];
-      this.players[0].position.set(-1.8, .15, 5.9); this.players[0].rotation.y = -.22;
-      this.players[1].position.set(1.4, .15, -6); this.players[1].rotation.y = Math.PI + .2; // 건너편 곰은 이쪽을 바라본다
+      // 모델의 정면은 +Z(카메라 쪽). 앞쪽 곰은 네트(-Z)를 보도록 돌리고, 건너편 곰은 그대로 이쪽(+Z)을 본다
+      this.players[0].position.set(-1.8, .15, 5.9); this.players[0].rotation.y = Math.PI - .22;
+      this.players[1].position.set(1.4, .15, -6); this.players[1].rotation.y = .2;
       this.players.forEach(p => { p.scale.setScalar(1.6); this.scene.add(p); });
       this.ball = prepare(assets[2].scene); this.ball.scale.setScalar(1.4); this.ball.position.set(0, 2.3, 2); this.scene.add(this.ball);
       const ring = new THREE.Mesh(new THREE.RingGeometry(.26, .38, 40), new THREE.MeshBasicMaterial({ color: '#9380b7', transparent: true, opacity: .28, side: THREE.DoubleSide }));

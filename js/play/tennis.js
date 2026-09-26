@@ -4,7 +4,7 @@ import { joinRoom } from './net.js';
 import { check, pick, serveWord, startOptions, preload, meaning } from './dict.js';
 import { COLORS, roomCode, makeMe, inviteLink, dialog, copyText, esc, HELP } from './common.js';
 
-const LIVES = 3;
+const LIVES = 3, MAX_PLAYERS = 6;
 // 난이도: 차례 시간, 컴퓨터 생각 시간, 컴퓨터가 공을 놓칠 확률
 const LEVELS = { easy: { seconds: 30, delay: [1500, 3500], miss: .15 }, normal: { seconds: 20, delay: [1200, 3000], miss: 0 }, hard: { seconds: 12, delay: [700, 1500], miss: 0 } };
 const BALL = { me: [-1.8, 1.3, 5.6], opp: [1.4, 1.3, -6], mid: [0, 4.3, 0] };
@@ -16,7 +16,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   let phase = 'lobby', opponent = initialCode ? 'friend' : 'computer', code = initialCode || '', countdown = 3, feedback = null, result = null;
   let difficulty = 'normal';
   const LV = () => LEVELS[difficulty] || LEVELS.normal;
-  let chain = [], options = null, turn = me.id, rally = 0, best = 0, seconds = LV().seconds, myWords = 0, myWrong = 0, meanings = {};
+  let chain = [], chainBy = [], options = null, turn = me.id, lastBy = null, rally = 0, best = 0, seconds = LV().seconds, myWords = 0, myWrong = 0, meanings = {};
   let players = [{ id: me.id, name: me.name, color: COLORS[0], lives: LIVES, ready: false }];
   const COMP = { id: 'computer', name: '곰돌 코치', color: COLORS[2], lives: LIVES, ready: true };
   let room = null, hostId = null, prevHost = null, joining = false, checking = false;
@@ -27,15 +27,27 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   const isHost = () => !room || hostId === me.id;
   const meP = () => players.find(p => p.id === me.id);
   const oppP = () => players.find(p => p.id !== me.id);
+  // 차례 순서: 접속 순서대로 돌아가며, 생명이 남은 사람만. 컴퓨터 모드는 나 → 컴퓨터
+  const order = () => (isOnline() || players.length > 1) ? players : [meP(), COMP];
+  const alive = () => order().filter(p => p && p.lives > 0);
+  const nextAfter = id => { const o = order(); const i = o.findIndex(p => p.id === id); const a = alive(); if (!a.length) return null; for (let k = 1; k <= o.length; k++) { const c = o[(i + k) % o.length]; if (c && c.lives > 0) return c.id; } return a[0].id; };
+  const nameOf = id => id === me.id ? me.name : (players.find(p => p.id === id) || (id === COMP.id ? COMP : null) || {}).name || '상대';
+  // 건너편 곰에 보여 줄 '지금의 상대': 내 차례면 공을 보낸 사람, 아니면 차례인 사람
+  const foe = () => { const id = turn === me.id ? lastBy : turn; const p = players.find(x => x.id === id && x.id !== me.id) || (id === COMP.id ? COMP : null); return p || oppP() || (opponent === 'computer' ? COMP : null); };
 
   /* ---------- 표시 상태 ---------- */
   function toView() {
     const last = chain[chain.length - 1] || '';
     const list = players.length > 1 ? players : players.concat(opponent === 'computer' ? [COMP] : [{ id: 'wait', name: '기다리는 중', color: COLORS[2], lives: LIVES, ready: false }]);
+    const f = foe();
+    const dispId = id => id === me.id ? 'me' : id;
     return {
       phase, opponent, roomCode: code, countdown, feedback, result, motion: true, previewMotion: false, difficulty, meanings,
-      turn: turn === me.id ? 'me' : 'opponent',
-      chain: chain.slice(), startLetter: options ? options.join('/') : (last ? last.slice(-1) : '·'), rally, seconds,
+      turn: turn === me.id ? 'me' : 'opponent', turnId: dispId(turn), turnName: nameOf(turn),
+      lastById: lastBy == null ? null : dispId(lastBy), lastByName: lastBy == null ? null : nameOf(lastBy),
+      foe: f ? { id: dispId(f.id), name: f.name, color: f.color || COLORS[2] } : null,
+      chain: chain.slice(), chainBy: chainBy.map(id => id == null ? '' : id === me.id ? '나' : nameOf(id)),
+      startLetter: options ? options.join('/') : (last ? last.slice(-1) : '·'), rally, seconds,
       players: list.map((p, i) => ({ id: p.id === me.id ? 'me' : p.id, name: p.name, color: p.color || COLORS[i % 3], score: 0, subtitle: '', lives: p.lives, ready: p.ready })),
       targets: [], remaining: 0, playerCount: 2, ballPosition: ballPos
     };
@@ -73,18 +85,18 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   function setTurn(id) { turn = id; seconds = LV().seconds; }
   function serve(toId) {
     // 새 공: 시스템이 낱말을 던져 준다
-    const w = serveWord(chain); chain.push(w); options = startOptions(w.slice(-1)); preload(options);
+    const w = serveWord(chain); chain.push(w); chainBy.push(null); lastBy = null; options = startOptions(w.slice(-1)); preload(options);
     setTurn(toId); flyBall(BALL.opp, toId === me.id ? BALL.me : BALL.opp);
     broadcast();
   }
   function broadcast(extra) {
-    if (room && isHost()) room.send({ t: 'ts', chain, options, turn, rally, seconds, lives: Object.fromEntries(players.map(p => [p.id, p.lives])), phase, ...extra });
+    if (room && isHost()) room.send({ t: 'ts', chain, chainBy, options, turn, lastBy, rally, seconds, lives: Object.fromEntries(players.map(p => [p.id, p.lives])), phase, ...extra });
   }
   function startClock() {
     clearInterval(clock);
     clock = setInterval(() => {
-      if (!['playing', 'urgent', 'waiting', 'invalid', 'wrong-start', 'duplicate', 'timeout'].includes(phase)) return;
-      if (turn === COMP.id) return; // 컴퓨터 차례는 타이머 없음
+      if (!['playing', 'urgent', 'waiting', 'invalid', 'wrong-start', 'duplicate'].includes(phase)) return; // 시간 초과 처리 중(timeout)에는 멈춘다
+      if (turn === COMP.id || seconds <= 0) return; // 컴퓨터 차례는 타이머 없음
       seconds--;
       if (seconds <= 3 && seconds > 0 && turn === me.id) sound.tick();
       if (seconds <= 0) { if (isHost()) timeout(turn); return; }
@@ -98,11 +110,13 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     if (id === me.id) sound.bad();
     const fb = id === me.id
       ? { tone: 'error', title: '아쉽게 공을 놓쳤어요', message: p.lives ? `생명 ${p.lives}개 남았어요. 새 공을 준비해요!` : '생명을 모두 잃었어요.', icon: 'heart' }
-      : { tone: 'success', title: `${p.name}님이 공을 놓쳤어요!`, message: p.lives ? '새 공으로 이어 가요.' : '내가 이겼어요!', icon: 'heart' };
+      : { tone: 'success', title: `${p.name}님이 공을 놓쳤어요!`, message: p.lives ? '새 공으로 이어 가요.' : (alive().filter(x => x.id !== id).length <= 1 ? '내가 이겼어요!' : `${p.name}님은 여기까지. 남은 사람끼리 이어 가요.`), icon: 'heart' };
     if (room) room.send({ t: 'fb', loser: id, fb, lives: p.lives });
     phase = 'timeout'; say(fb);
-    if (p.lives <= 0) { setTimeout(() => finish(), 1500); return; }
-    setTimeout(() => { if (disposed || phase === 'result') return; phase = 'playing'; serve(id === COMP.id ? me.id : id); sync(); if (turn === me.id) view.focusInput(); }, 1600);
+    if (alive().length <= 1) { setTimeout(() => finish(), 1500); return; }
+    // 놓친 사람이 아직 살아 있으면 다시 받고, 탈락했으면 다음 사람이 받는다. 컴퓨터가 놓치면 내가 받는다
+    const toId = id === COMP.id ? me.id : (p.lives > 0 ? id : nextAfter(id));
+    setTimeout(() => { if (disposed || phase === 'result') return; phase = 'playing'; serve(toId); sync(); if (turn === me.id) view.focusInput(); }, 1600);
   }
   async function submit(word, byId) {
     if (turn !== byId || checking) return;
@@ -126,14 +140,15 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     accept(r.word, byId);
   }
   function accept(word, byId) {
-    chain.push(word); rally++; best = Math.max(best, rally);
+    chain.push(word); chainBy.push(byId); lastBy = byId; rally++; best = Math.max(best, rally);
     options = startOptions(word.slice(-1)); preload(options);
-    const nextId = byId === me.id ? (oppP() ? oppP().id : COMP.id) : me.id;
+    const nextId = nextAfter(byId) || me.id;
     setTurn(nextId);
-    flyBall(byId === me.id ? BALL.me : BALL.opp, byId === me.id ? BALL.opp : BALL.me);
+    flyBall(byId === me.id ? BALL.me : BALL.opp, nextId === me.id ? BALL.me : BALL.opp);
     view.playEffect('success');
-    if (byId === me.id) { myWords++; sound.ok(); phase = 'waiting'; say({ tone: 'success', title: '멋진 받아치기!', message: `${word} → 다음은 ‘${options.join('/')}’`, icon: 'sparkle' }); }
-    else { phase = 'playing'; say({ tone: 'neutral', title: `${(players.find(p => p.id === byId) || COMP).name}님이 받아쳤어요`, message: `${word} → 이번에는 ‘${options.join('/')}’`, icon: 'racket' }); view.focusInput(); }
+    if (byId === me.id) { myWords++; sound.ok(); phase = 'waiting'; say({ tone: 'success', title: '멋진 받아치기!', message: `${word} → 다음은 ‘${options.join('/')}’${nextId !== me.id && alive().length > 2 ? ` (${nameOf(nextId)}님 차례)` : ''}`, icon: 'sparkle' }); }
+    else if (nextId === me.id) { phase = 'playing'; say({ tone: 'neutral', title: `${nameOf(byId)}님이 받아쳤어요`, message: `${word} → 이번에는 ‘${options.join('/')}’`, icon: 'racket' }); view.focusInput(); }
+    else { phase = 'waiting'; say({ tone: 'neutral', title: `${nameOf(byId)}님이 받아쳤어요`, message: `${word} → ${nameOf(nextId)}님 차례예요`, icon: 'racket' }); }
     broadcast();
     if (nextId === COMP.id) computerTurn();
   }
@@ -151,13 +166,13 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   }
   function beginCountdown() {
     phase = 'countdown'; countdown = 3; feedback = null; result = null;
-    chain = []; options = null; rally = 0; best = 0; myWords = 0; myWrong = 0; meanings = {}; players.forEach(p => { p.lives = LIVES; }); COMP.lives = LIVES;
+    chain = []; chainBy = []; lastBy = null; options = null; rally = 0; best = 0; myWords = 0; myWrong = 0; meanings = {}; players.forEach(p => { p.lives = LIVES; }); COMP.lives = LIVES;
     sync(); clearInterval(cdTimer);
     cdTimer = setInterval(() => { countdown--; if (countdown <= 0) { clearInterval(cdTimer); play(); } else { sound.tick(); sync(); } }, 1000);
   }
   function play() {
     phase = 'playing'; feedback = null;
-    if (isHost()) { serve(isOnline() ? (oppP() ? oppP().id : me.id) : me.id); }
+    if (isHost()) { serve(isOnline() ? (nextAfter(me.id) || me.id) : me.id); }
     sync(); if (turn === me.id) { view.clearInput(); view.focusInput(); }
     startClock();
   }
@@ -169,11 +184,14 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     showResult(reason);
   }
   function showResult(reason) {
-    const mine = meP() || { lives: 0 }, other = oppP() || COMP;
-    const won = mine.lives > 0 && other.lives <= 0;
+    const mine = meP() || { lives: 0 };
+    const others = order().filter(p => p && p.id !== me.id);
+    const survivors = alive();
+    const won = mine.lives > 0 && others.length > 0 && others.every(p => p.lives <= 0);
     const acc = myWords + myWrong ? Math.round(myWords / (myWords + myWrong) * 100) : 100;
-    const title = reason === 'host-left' ? '상대가 나가서 경기가 끝났어요' : won ? '🏆 이겼어요!' : mine.lives <= 0 ? '아쉽지만 다음에 또!' : '좋은 랠리였어요!';
-    const subtitle = won ? `${other.name}님이 공을 다 놓쳤어요. 최고 랠리 ${best}회!` : `마음이 통하는 한 단어, 또 함께 이어 볼까요?`;
+    const winner = survivors.length === 1 ? survivors[0] : null;
+    const title = reason === 'host-left' ? '상대가 나가서 경기가 끝났어요' : reason === 'others-left' ? '모두 나가서 경기가 끝났어요' : won ? '🏆 이겼어요!' : mine.lives <= 0 ? '아쉽지만 다음에 또!' : '좋은 랠리였어요!';
+    const subtitle = won ? `${others.map(p => p.name).join(', ')}님이 공을 다 놓쳤어요. 최고 랠리 ${best}회!` : winner && winner.id !== me.id ? `${winner.name}님이 이겼어요. 최고 랠리 ${best}회!` : `마음이 통하는 한 단어, 또 함께 이어 볼까요?`;
     result = { title, subtitle, rally: best, words: myWords, accuracy: acc };
     records.set('tennis', best, (a, b) => a > b); records.bump();
     won ? sound.win() : sound.lose(); feedback = null; sync();
@@ -202,11 +220,21 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     if (disposed) return;
     prevHost = hostId; hostId = list[0] ? list[0].id : null;
     const byId = new Map(players.map(p => [p.id, p]));
-    players = list.slice(0, 2).map((m, i) => { const p = byId.get(m.id) || { id: m.id, name: m.name, lives: LIVES }; p.name = m.name; p.ready = !!m.ready; p.color = i ? COLORS[2] : COLORS[0]; return p; });
+    const inGame = !['lobby', 'matching', 'result'].includes(phase);
+    const gone = inGame ? players.filter(p => !list.find(m => m.id === p.id)) : [];
+    players = list.slice(0, MAX_PLAYERS).map((m, i) => { const p = byId.get(m.id) || { id: m.id, name: m.name, lives: LIVES }; p.name = m.name; p.ready = !!m.ready; p.color = i === 0 ? COLORS[0] : [COLORS[2], COLORS[1], 'orchid', 'sky', 'butter'][(i - 1) % 5]; return p; });
+    if (inGame) { // 경기 중에는 새로 들어온 사람은 다음 판부터
+      players = players.filter(p => byId.has(p.id) || p.id === me.id);
+    }
     if (!players.find(p => p.id === me.id)) players.unshift({ id: me.id, name: me.name, color: COLORS[0], lives: LIVES, ready: false });
     if (phase === 'matching' && players.length >= 2) { phase = 'lobby'; say({ tone: 'success', title: '함께 칠 친구를 만났어요!', message: '준비 버튼을 누르면 시작해요.', icon: 'users' }); }
-    if (!['lobby', 'matching', 'result'].includes(phase) && prevHost && prevHost !== me.id && !list.find(m => m.id === prevHost)) { clearInterval(cdTimer); finish('host-left'); return; }
-    if (!['lobby', 'matching', 'result'].includes(phase) && oppP() && !list.find(m => m.id === oppP().id)) { finish('host-left'); return; }
+    if (inGame && prevHost && prevHost !== me.id && !list.find(m => m.id === prevHost)) { clearInterval(cdTimer); finish('host-left'); return; }
+    if (inGame && gone.length) {
+      if (alive().length <= 1) { finish(alive().length && alive()[0].id === me.id ? 'others-left' : 'host-left'); return; }
+      say({ tone: 'neutral', title: `${gone.map(g => g.name).join(', ')}님이 나갔어요`, message: '남은 사람끼리 이어 가요.', icon: 'users' });
+      if (isHost() && gone.some(g => g.id === turn)) { const n = nextAfter(gone[0].id) || me.id; phase = 'playing'; serve(n); }
+      broadcast();
+    }
     if (phase === 'lobby' && isHost() && players.length >= 2 && players.every(p => p.ready)) { room.send({ t: 'start', difficulty }); beginCountdown(); return; }
     sync();
   }
@@ -215,12 +243,13 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     if (m.t === 'start' && m.from === hostId) { if (LEVELS[m.difficulty]) difficulty = m.difficulty; beginCountdown(); return; }
     if (m.t === 'ts' && m.from === hostId && !isHost()) {
       const wasTurn = turn, oldLen = chain.length;
-      chain = m.chain; options = m.options; turn = m.turn; rally = m.rally; best = Math.max(best, rally); seconds = m.seconds;
+      chain = m.chain; chainBy = m.chainBy || chain.map(() => null); options = m.options; turn = m.turn; lastBy = m.lastBy == null ? null : m.lastBy; rally = m.rally; best = Math.max(best, rally); seconds = m.seconds;
       players.forEach(p => { if (m.lives[p.id] != null) p.lives = m.lives[p.id]; });
       if (chain.length > oldLen) {
-        const word = chain[chain.length - 1];
-        if (wasTurn === me.id && turn !== me.id) { /* 내 낱말이 인정됨 */ myWords++; sound.ok(); phase = 'waiting'; flyBall(BALL.me, BALL.opp); view.playEffect('success'); say({ tone: 'success', title: '멋진 받아치기!', message: `${word} → 다음은 ‘${(options || []).join('/')}’`, icon: 'sparkle' }); }
-        else if (turn === me.id) { phase = 'playing'; flyBall(BALL.opp, BALL.me); say({ tone: 'neutral', title: `${(oppP() || {}).name || '상대'}님이 받아쳤어요`, message: `${word} → 이번에는 ‘${(options || []).join('/')}’`, icon: 'racket' }); view.focusInput(); }
+        const word = chain[chain.length - 1], by = chainBy[chainBy.length - 1];
+        if (by === me.id) { /* 내 낱말이 인정됨 */ myWords++; sound.ok(); phase = 'waiting'; flyBall(BALL.me, BALL.opp); view.playEffect('success'); say({ tone: 'success', title: '멋진 받아치기!', message: `${word} → 다음은 ‘${(options || []).join('/')}’${turn !== me.id && alive().length > 2 ? ` (${nameOf(turn)}님 차례)` : ''}`, icon: 'sparkle' }); }
+        else if (turn === me.id) { phase = 'playing'; flyBall(BALL.opp, BALL.me); say({ tone: 'neutral', title: by == null ? '새 공이 왔어요' : `${nameOf(by)}님이 받아쳤어요`, message: `${word} → 이번에는 ‘${(options || []).join('/')}’`, icon: 'racket' }); view.focusInput(); }
+        else { phase = 'waiting'; if (by != null) { flyBall(BALL.opp, BALL.opp); say({ tone: 'neutral', title: `${nameOf(by)}님이 받아쳤어요`, message: `${word} → ${nameOf(turn)}님 차례예요`, icon: 'racket' }); } }
       } else if (!['timeout', 'invalid', 'wrong-start', 'duplicate'].includes(phase)) phase = turn === me.id ? (seconds <= 5 ? 'urgent' : 'playing') : 'waiting';
       sync(); return;
     }
@@ -231,7 +260,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
       const mine = m.loser === me.id; if (mine) sound.bad();
       phase = 'timeout';
       say(mine ? { tone: 'error', title: '아쉽게 공을 놓쳤어요', message: m.lives ? `생명 ${m.lives}개 남았어요. 새 공을 준비해요!` : '생명을 모두 잃었어요.', icon: 'heart' }
-               : { tone: 'success', title: `${(p || {}).name || '상대'}님이 공을 놓쳤어요!`, message: m.lives ? '새 공으로 이어 가요.' : '내가 이겼어요!', icon: 'heart' });
+               : { tone: 'success', title: `${(p || {}).name || '상대'}님이 공을 놓쳤어요!`, message: m.lives ? '새 공으로 이어 가요.' : (alive().length <= 1 ? '내가 이겼어요!' : `${(p || {}).name || '상대'}님은 여기까지. 남은 사람끼리 이어 가요.`), icon: 'heart' });
       return;
     }
     if (m.t === 'end' && m.from === hostId && !isHost()) { players.forEach(p => { if (m.lives[p.id] != null) p.lives = m.lives[p.id]; }); best = Math.max(best, m.best || 0); clearInterval(clock); phase = 'result'; showResult(m.reason); }
