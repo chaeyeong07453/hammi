@@ -1,18 +1,26 @@
-/* 단어 드라이브: 다가오는 자동차의 단어를 먼저 치는 사람이 점수를 얻는다. 1~3명, 온라인 대전은 방장이 심판 */
+/* 단어 드라이브: 다가오는 동그라미 속 낱말·구·문장을 먼저 치는 사람이 점수를 얻는다. 1~3명, 온라인 대전은 방장이 심판 */
 import { mountGame } from '../../game-design/ui.js';
 import { joinRoom } from './net.js';
 import { COLORS, roomCode, makeMe, inviteLink, dialog, copyText, esc, HELP } from './common.js';
 
-const DURATION = 90, MAX_TARGETS = 3, SPAWN_MS = 3600, Z_START = -32, Z_END = 9, SNAP_MS = 250;
-const pointsFor = w => w.length <= 2 ? 30 : w.length === 3 ? 50 : 70;
+const DURATION = 90, MAX_TARGETS = 3, Z_START = -32, Z_END = 1.2, SNAP_MS = 250;
+// 빠르기: 기본 속도 배수와 낱말이 나오는 간격
+const SPEEDS = { slow: { mult: 1.2, spawn: 3300 }, normal: { mult: 1.8, spawn: 2600 }, fast: { mult: 2.6, spawn: 2000 } };
+// 낱말 종류와 점수: 1~2글자 10점, 3~4글자 20점, 구 30점, 문장 50점
+function kindOf(text) {
+  if (!/\s/.test(text)) return text.length <= 2 ? 'short' : 'word';
+  return text.length > 12 || /(요|다|까|니|죠|네|세요)$/.test(text) ? 'sentence' : 'phrase';
+}
+const POINTS = { short: 10, word: 20, phrase: 30, sentence: 50 };
+const pointsFor = text => POINTS[kindOf(text)];
 
 export function start(root, { code: initialCode = null, onLeave = () => {} } = {}) {
   const { records, sound } = window.App;
   const me = makeMe();
   let disposed = false;
-  let phase = 'lobby', playerCount = initialCode ? 2 : 1, code = initialCode || '', remaining = DURATION, countdown = 3, feedback = null, result = null;
+  let phase = 'lobby', playerCount = initialCode ? 2 : 1, code = initialCode || '', remaining = DURATION, countdown = 3, feedback = null, result = null, speed = 'normal';
   let players = [{ id: me.id, name: me.name, color: COLORS[0], score: 0, ready: false, words: 0, wrong: 0 }];
-  let targets = [], pool = [], room = null, hostId = null, prevHost = null, joining = false;
+  let targets = [], pools = { short: [], word: [], phrase: [], sentence: [] }, room = null, hostId = null, prevHost = null, joining = false;
   let raf = 0, lastT = 0, spawnAt = 0, clock = null, cdTimer = null, fbTimer = null, snapAt = 0, seq = 0, elapsed = 0, liveTargets = [];
 
   const isOnline = () => !!room;
@@ -22,9 +30,9 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   /* ---------- 표시 상태 ---------- */
   function toView() {
     return {
-      phase, playerCount, roomCode: code, remaining, countdown, feedback, result, motion: true, previewMotion: false,
+      phase, playerCount, speed, roomCode: code, remaining, countdown, feedback, result, motion: true, previewMotion: false,
       players: players.map((p, i) => ({ id: p.id === me.id ? 'me' : p.id, name: p.name, color: p.color || COLORS[i % 3], score: p.score, subtitle: ({ lilac: '보라 드라이버', mint: '민트 드라이버', peach: '살구 드라이버' })[p.color || COLORS[i % 3]], ready: p.ready, lives: 3 })),
-      targets: targets.map(t => ({ id: t.id, word: t.word, points: t.points, lane: t.lane, z: t.z, claimedBy: t.claimedBy }))
+      targets: targets.map(t => ({ id: t.id, word: t.word, points: t.points, kind: t.kind === 'short' ? 'word' : t.kind, lane: t.lane, z: t.z, claimedBy: t.claimedBy }))
     };
   }
   const view = mountGame(root, { game: 'race', state: toView(), onEvent: handle });
@@ -36,11 +44,20 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   }
 
   /* ---------- 경기 진행 (방장 또는 혼자) ---------- */
+  // 낱말 55% · 구 30% · 문장 15%로 섞어서 낸다
+  function fillPool(kind) {
+    const D = window.DATA;
+    const src = kind === 'short' ? D.gameWords.filter(w => w.length <= 2) : kind === 'word' ? D.gameWords.filter(w => w.length >= 3 && w.length <= 4) : D.gamePhrases.filter(t => kindOf(t) === kind);
+    pools[kind] = window.App.shuffle(src);
+  }
   function nextWord() {
-    if (!pool.length) pool = window.App.shuffle(window.DATA.gameWords.filter(w => w.length <= 4));
+    const r = Math.random();
+    const kind = r < .25 ? 'short' : r < .55 ? 'word' : r < .85 ? 'phrase' : 'sentence';
+    if (!pools[kind].length) fillPool(kind);
     const onScreen = new Set(targets.map(t => t.word));
+    const pool = pools[kind];
     for (let i = 0; i < pool.length; i++) if (!onScreen.has(pool[i])) return pool.splice(i, 1)[0];
-    return pool.pop();
+    return pool.pop() || '봄';
   }
   function spawn() {
     if (targets.length >= MAX_TARGETS) return;
@@ -48,8 +65,11 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     const lanes = [0, 1, 2].filter(l => !used.has(l));
     const lane = lanes[Math.floor(Math.random() * lanes.length)];
     const word = nextWord();
-    const speed = (2.5 + Math.min(1.3, elapsed / DURATION * 1.6)) * (0.9 + Math.random() * 0.2);
-    targets.push({ id: 't' + (++seq), word, points: pointsFor(word), lane, z: Z_START, speed });
+    const kind = kindOf(word);
+    // 긴 글일수록 조금 천천히 와서 읽고 칠 시간을 준다
+    const lenFactor = kind === 'sentence' ? .78 : kind === 'phrase' ? .88 : 1;
+    const v = 2.5 * SPEEDS[speed].mult * (1 + Math.min(.3, elapsed / DURATION * .4)) * (0.92 + Math.random() * 0.16) * lenFactor;
+    targets.push({ id: 't' + (++seq), word, kind, points: pointsFor(word), lane, z: Z_START, speed: v });
     sync();
   }
   // 경기 진행(방장/혼자): 탭이 뒤로 가도 멈추지 않도록 타이머로 돌린다
@@ -63,7 +83,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     const before = targets.length;
     targets = targets.filter(t => t.claimedBy || t.z < Z_END);
     let changed = targets.length !== before;
-    if (now - spawnAt > SPAWN_MS && targets.length < MAX_TARGETS) { spawnAt = now; spawn(); changed = false; }
+    if (now - spawnAt > SPEEDS[speed].spawn && targets.length < MAX_TARGETS) { spawnAt = now; spawn(); changed = false; }
     if (changed) sync(); else pushZ();
     if (room && now - snapAt > SNAP_MS) { snapAt = now; room.send({ t: 'snap', targets, scores: Object.fromEntries(players.map(p => [p.id, p.score])), remaining, phase }); }
   }
@@ -93,7 +113,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   function beginCountdown() {
     phase = 'countdown'; countdown = 3; feedback = null; result = null;
     players.forEach(p => { p.score = 0; p.words = 0; p.wrong = 0; });
-    targets = []; pool = []; remaining = DURATION; elapsed = 0; seq = 0; sync();
+    targets = []; pools = { short: [], word: [], phrase: [], sentence: [] }; remaining = DURATION; elapsed = 0; seq = 0; sync();
     clearInterval(cdTimer);
     cdTimer = setInterval(() => {
       countdown--;
@@ -101,7 +121,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     }, 1000);
   }
   function play() {
-    phase = 'playing'; feedback = null; lastT = 0; spawnAt = performance.now() - SPAWN_MS + 600;
+    phase = 'playing'; feedback = null; lastT = 0; spawnAt = performance.now() - SPEEDS[speed].spawn + 600;
     sync(); view.clearInput(); view.focusInput();
     lastSim = 0; clearInterval(sim); sim = setInterval(simStep, 50);
     raf = requestAnimationFrame(tick);
@@ -128,7 +148,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   function wrongInput(word) {
     const p = meP(); if (p) p.wrong++;
     sound.bad();
-    say({ tone: 'error', title: '지금 보이는 단어가 아니에요', message: `‘${word}’ 대신 자동차 위 단어를 다시 봐 주세요.`, icon: 'info' });
+    say({ tone: 'error', title: '지금 보이는 글이 아니에요', message: word ? `‘${word}’ 대신 다가오는 동그라미 속 글을 다시 봐 주세요.` : '다가오는 동그라미 속 글을 다시 봐 주세요.', icon: 'info' });
   }
   function finish(reason) {
     if (phase === 'result') return;
@@ -179,12 +199,12 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     if (!players.find(p => p.id === me.id)) players.unshift({ id: me.id, name: me.name, color: COLORS[0], score: 0, ready: false, words: 0, wrong: 0 });
     if (phase === 'matching' && players.length >= 2) { phase = 'lobby'; say({ tone: 'success', title: '함께 달릴 친구를 만났어요!', message: '준비 버튼을 누르면 시작해요.', icon: 'users' }); }
     if ((phase === 'playing' || phase === 'urgent' || phase === 'countdown') && prevHost && prevHost !== hostId && prevHost !== me.id && !list.find(m => m.id === prevHost)) { clearInterval(cdTimer); finish('host-left'); return; }
-    if (phase === 'lobby' && isHost() && players.length >= 2 && players.every(p => p.ready)) { room.send({ t: 'start' }); beginCountdown(); return; }
+    if (phase === 'lobby' && isHost() && players.length >= 2 && players.every(p => p.ready)) { room.send({ t: 'start', speed }); beginCountdown(); return; }
     sync();
   }
   function onMessage(m) {
     if (disposed || !room) return;
-    if (m.t === 'start' && m.from === hostId) { beginCountdown(); return; }
+    if (m.t === 'start' && m.from === hostId) { if (SPEEDS[m.speed]) speed = m.speed; beginCountdown(); return; }
     if (m.t === 'snap' && m.from === hostId && !isHost()) {
       const mine = new Map(targets.map(t => [t.id, t]));
       targets = m.targets.map(t => { const l = mine.get(t.id); if (l) { l.z = t.z; l.speed = t.speed; l.claimedBy = t.claimedBy; return l; } return { ...t }; });
@@ -219,6 +239,12 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
         else if (!room) enterRoom(roomCode(), false);
         else sync();
         return;
+      }
+      case 'speed-change': {
+        if (!SPEEDS[ev.speed] || !(phase === 'lobby' || phase === 'matching' || phase === 'result')) return;
+        speed = ev.speed;
+        if (room && !isHost()) say({ tone: 'neutral', title: '빠르기는 방장이 정해요', message: '방장이 고른 빠르기로 함께 달려요.', icon: 'info' });
+        sync(); return;
       }
       case 'ready': {
         if (phase !== 'lobby') return;
