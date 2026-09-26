@@ -258,7 +258,8 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
         if (joining) { say({ tone: 'neutral', title: '아직 방에 연결하는 중이에요', message: '연결이 끝나면 다시 눌러 주세요.', icon: 'clock' }); return; }
         if (!room) { beginCountdown(); return; }
         meP().ready = true; await room.track({ ready: true });
-        if (players.length < 2) say({ tone: 'neutral', title: '친구를 기다리고 있어요', message: '초대 코드를 알려 주면 같은 코트에서 만나요.', icon: 'users' }, 0);
+        if (phase !== 'lobby') return;
+        if (players.length < 2) say({ tone: 'neutral', title: '친구를 기다리고 있어요', message: '초대 코드를 알려 주면 같은 코트에서 만나요.', icon: 'users' }, 6000);
         sync(); return;
       }
       case 'find-opponent': { await leaveRoom(); opponent = 'friend'; enterRoom('QUICK', true); return; }

@@ -252,8 +252,9 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
         if (!room) { beginCountdown(); return; }
         const p = meP(); p.ready = true;
         await room.track({ ready: true });
-        if (players.length < 2) say({ tone: 'neutral', title: '친구를 기다리고 있어요', message: '초대 코드를 알려 주면 같은 도로에서 만나요.', icon: 'users' }, 0);
-        else if (!players.every(x => x.ready)) say({ tone: 'neutral', title: '준비 완료!', message: '다른 친구가 준비하면 바로 출발해요.', icon: 'check' }, 0);
+        if (phase !== 'lobby') return;
+        if (players.length < 2) say({ tone: 'neutral', title: '친구를 기다리고 있어요', message: '초대 코드를 알려 주면 같은 도로에서 만나요.', icon: 'users' }, 6000);
+        else if (!players.every(x => x.ready)) say({ tone: 'neutral', title: '준비 완료!', message: '다른 친구가 준비하면 바로 출발해요.', icon: 'check' }, 6000);
         sync(); return;
       }
       case 'find-opponent': { await leaveRoom(); playerCount = Math.max(2, playerCount); enterRoom('QUICK', true); return; }
