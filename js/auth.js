@@ -93,21 +93,24 @@
       if (mode === 'login') {
         card.innerHTML = tabs + `
           <h2>다시 만나 반가워요.</h2>
-          <p class="lead">이름을 누르고 비밀번호 4자리를 넣어 주세요.</p>
-          <div class="user-pick">${users.map(u => `<button class="user-btn ${chosen === u.id ? 'on' : ''}" data-id="${esc(u.id)}">${esc(u.id)}</button>`).join('')}</div>
+          <p class="lead">${users.length ? '이름을 누르거나 직접 쓰고, 비밀번호 4자리를 넣어 주세요.' : '이름과 비밀번호 4자리를 넣어 주세요.'}</p>
+          ${users.length ? `<div class="user-pick">${users.map(u => `<button class="user-btn ${chosen === u.id ? 'on' : ''}" data-id="${esc(u.id)}">${esc(u.id)}</button>`).join('')}</div>` : `<div class="tips">이 컴퓨터에 만든 계정이 아직 없어요. 처음이라면 <b>회원가입</b>을 눌러 주세요. 계정은 만든 컴퓨터에만 저장돼요.</div>`}
+          <div class="form-row"><label for="uid">이름</label><input class="text-input" id="uid" type="text" maxlength="10" placeholder="예) 채영, 채민" autocomplete="off" value="${esc(chosen || '')}"></div>
           <div class="form-row"><label for="pin">비밀번호 (숫자 4자리)</label><input class="text-input pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
           <div class="form-msg" id="msg"></div>
           <div class="btn-row"><button class="btn big" id="go">들어가기</button></div>`;
-        card.querySelectorAll('.user-btn').forEach(b => b.onclick = () => { chosen = b.dataset.id; card.querySelectorAll('.user-btn').forEach(x => x.classList.toggle('on', x.dataset.id === chosen)); $('#pin').focus(); });
+        card.querySelectorAll('.user-btn').forEach(b => b.onclick = () => { chosen = b.dataset.id; $('#uid').value = chosen; card.querySelectorAll('.user-btn').forEach(x => x.classList.toggle('on', x.dataset.id === chosen)); $('#pin').focus(); });
+        $('#uid').addEventListener('input', () => { chosen = $('#uid').value.trim(); card.querySelectorAll('.user-btn').forEach(x => x.classList.toggle('on', x.dataset.id === chosen)); });
         $('#go').onclick = () => {
-          if (!chosen) return msg('먼저 이름을 눌러 주세요.');
+          chosen = $('#uid').value.trim();
+          if (!chosen) { $('#uid').focus(); return msg('이름을 넣어 주세요.'); }
           const err = Auth.login(chosen, $('#pin').value);
           if (err) { msg(err); $('#pin').value = ''; $('#pin').focus(); sound.bad(); return; }
           sound.ok(); location.hash = '#/home';
         };
-        if (users.length === 1) { chosen = users[0].id; card.querySelector('.user-btn').classList.add('on'); }
-        $('#pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#go').click(); });
-        $('#pin').focus();
+        if (users.length === 1 && !chosen) { chosen = users[0].id; card.querySelector('.user-btn').classList.add('on'); $('#uid').value = chosen; }
+        ['uid', 'pin'].forEach(i => $('#' + i).addEventListener('keydown', e => { if (e.key === 'Enter') $('#go').click(); }));
+        (chosen ? $('#pin') : $('#uid')).focus();
       } else {
         card.innerHTML = tabs + `
           <h2>나만의 연습 기록을 시작해요.</h2>
