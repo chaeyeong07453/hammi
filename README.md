@@ -37,7 +37,7 @@
 - `js/play.js`: `#/race`, `#/tennis` 라우트. 게임에 들어갈 때만 3D 모듈을 동적으로 불러옵니다. `index.html`의 import map이 Three.js 경로를 정합니다.
 - `js/play/race.js`, `js/play/tennis.js`: 게임 규칙. 온라인 방에서는 입장 순서가 가장 빠른 사람(방장)이 심판 역할을 하고 나머지는 상태를 받아 표시합니다.
 - `js/play/net.js`: Supabase Realtime(Presence + Broadcast)로 방을 만듭니다. 표는 쓰지 않습니다. 방 주소는 `#/race/CODE`, `#/tennis/CODE`이며 `QUICK` 방이 "상대 찾기"에 쓰입니다.
-- `js/play/dict.js`: 끝말잇기 사전. `data/dict/{0..18}.txt`는 국립국어원 표준국어대사전 표제어(acidsound/korean_wordlist 기반)를 한글 2~5음절만 남겨 첫 자음별로 나눈 것으로, 필요한 조각만 불러옵니다. 두음법칙은 양방향으로 허용합니다.
+- `js/play/dict.js`: 끝말잇기 사전. `data/dict/{0..18}.txt`는 국립국어원 표준국어대사전 표제어(acidsound/korean_wordlist 기반)를 한글 2~5음절만 남겨 첫 자음별로 나눈 것으로, 필요한 조각만 불러옵니다. 두음법칙은 양방향으로 허용합니다. 뜻풀이(`data/mean/{0..18}.json`)는 국립국어원 표준국어대사전 기반 acidsound/korean_wordlist의 풀이를 2~3음절 낱말만 짧게 줄인 것이며, 자주 쓰는 낱말 340여 개는 직접 쓴 풀이로 바꿨습니다.
 
 ## 함께 보는 글 관리
 

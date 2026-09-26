@@ -1,10 +1,12 @@
 /* 끝말 테니스: 상대 낱말의 끝 글자로 시작하는 낱말을 시간 안에 받아친다. 컴퓨터 또는 친구(온라인, 방장이 심판) */
 import { mountGame } from '../../game-design/ui.js';
 import { joinRoom } from './net.js';
-import { check, pick, serveWord, startOptions, preload } from './dict.js';
+import { check, pick, serveWord, startOptions, preload, meaning } from './dict.js';
 import { COLORS, roomCode, makeMe, inviteLink, dialog, copyText, esc, HELP } from './common.js';
 
-const TURN_SECONDS = 20, LIVES = 3;
+const LIVES = 3;
+// 난이도: 차례 시간, 컴퓨터 생각 시간, 컴퓨터가 공을 놓칠 확률
+const LEVELS = { easy: { seconds: 30, delay: [1500, 3500], miss: .15 }, normal: { seconds: 20, delay: [1200, 3000], miss: 0 }, hard: { seconds: 12, delay: [700, 1500], miss: 0 } };
 const BALL = { me: [-1.8, 1.3, 5.6], opp: [1.4, 1.3, -6], mid: [0, 4.3, 0] };
 
 export function start(root, { code: initialCode = null, onLeave = () => {} } = {}) {
@@ -12,7 +14,9 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   const me = makeMe();
   let disposed = false;
   let phase = 'lobby', opponent = initialCode ? 'friend' : 'computer', code = initialCode || '', countdown = 3, feedback = null, result = null;
-  let chain = [], options = null, turn = me.id, rally = 0, best = 0, seconds = TURN_SECONDS, myWords = 0, myWrong = 0;
+  let difficulty = 'normal';
+  const LV = () => LEVELS[difficulty] || LEVELS.normal;
+  let chain = [], options = null, turn = me.id, rally = 0, best = 0, seconds = LV().seconds, myWords = 0, myWrong = 0, meanings = {};
   let players = [{ id: me.id, name: me.name, color: COLORS[0], lives: LIVES, ready: false }];
   const COMP = { id: 'computer', name: '곰돌 코치', color: COLORS[2], lives: LIVES, ready: true };
   let room = null, hostId = null, prevHost = null, joining = false, checking = false;
@@ -29,7 +33,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     const last = chain[chain.length - 1] || '';
     const list = players.length > 1 ? players : players.concat(opponent === 'computer' ? [COMP] : [{ id: 'wait', name: '기다리는 중', color: COLORS[2], lives: LIVES, ready: false }]);
     return {
-      phase, opponent, roomCode: code, countdown, feedback, result, motion: true, previewMotion: false,
+      phase, opponent, roomCode: code, countdown, feedback, result, motion: true, previewMotion: false, difficulty, meanings,
       turn: turn === me.id ? 'me' : 'opponent',
       chain: chain.slice(), startLetter: options ? options.join('/') : (last ? last.slice(-1) : '·'), rally, seconds,
       players: list.map((p, i) => ({ id: p.id === me.id ? 'me' : p.id, name: p.name, color: p.color || COLORS[i % 3], score: 0, subtitle: '', lives: p.lives, ready: p.ready })),
@@ -37,7 +41,15 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     };
   }
   const view = mountGame(root, { game: 'tennis', state: toView(), onEvent: handle });
-  function sync() { if (disposed) return; view.setState(toView()); view.scene.state.ballPosition = ballPos; }
+  function sync() { if (disposed) return; view.setState(toView()); view.scene.state.ballPosition = ballPos; loadMeanings(); }
+  const meaningPending = new Set();
+  function loadMeanings() {
+    chain.slice(-6).forEach(w => {
+      if (w in meanings || meaningPending.has(w)) return;
+      meaningPending.add(w);
+      meaning(w).then(m => { meaningPending.delete(w); if (disposed) return; meanings[w] = m || ''; if (m && chain.includes(w)) view.setState({ meanings: { ...meanings } }); }).catch(() => meaningPending.delete(w));
+    });
+  }
   function say(fb, ms = 3000) {
     feedback = fb; clearTimeout(fbTimer);
     if (fb && ms) fbTimer = setTimeout(() => { if (feedback === fb) { feedback = null; sync(); } }, ms);
@@ -58,7 +70,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   }
 
   /* ---------- 규칙 (혼자/컴퓨터, 또는 방장) ---------- */
-  function setTurn(id) { turn = id; seconds = TURN_SECONDS; }
+  function setTurn(id) { turn = id; seconds = LV().seconds; }
   function serve(toId) {
     // 새 공: 시스템이 낱말을 던져 준다
     const w = serveWord(chain); chain.push(w); options = startOptions(w.slice(-1)); preload(options);
@@ -127,11 +139,11 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   }
   function computerTurn() {
     clearTimeout(compTimer);
-    const delay = 1200 + Math.random() * 1800;
+    const [d0, d1] = LV().delay, delay = d0 + Math.random() * (d1 - d0);
     seconds = Math.ceil(delay / 1000); sync();
     compTimer = setTimeout(async () => {
       if (disposed || turn !== COMP.id) return;
-      const w = await pick(options, chain);
+      const w = Math.random() < LV().miss ? null : await pick(options, chain, difficulty);
       if (disposed || turn !== COMP.id) return;
       if (!w) { timeout(COMP.id); return; }
       accept(w, COMP.id);
@@ -139,7 +151,7 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   }
   function beginCountdown() {
     phase = 'countdown'; countdown = 3; feedback = null; result = null;
-    chain = []; options = null; rally = 0; best = 0; myWords = 0; myWrong = 0; players.forEach(p => { p.lives = LIVES; }); COMP.lives = LIVES;
+    chain = []; options = null; rally = 0; best = 0; myWords = 0; myWrong = 0; meanings = {}; players.forEach(p => { p.lives = LIVES; }); COMP.lives = LIVES;
     sync(); clearInterval(cdTimer);
     cdTimer = setInterval(() => { countdown--; if (countdown <= 0) { clearInterval(cdTimer); play(); } else { sound.tick(); sync(); } }, 1000);
   }
@@ -195,12 +207,12 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
     if (phase === 'matching' && players.length >= 2) { phase = 'lobby'; say({ tone: 'success', title: '함께 칠 친구를 만났어요!', message: '준비 버튼을 누르면 시작해요.', icon: 'users' }); }
     if (!['lobby', 'matching', 'result'].includes(phase) && prevHost && prevHost !== me.id && !list.find(m => m.id === prevHost)) { clearInterval(cdTimer); finish('host-left'); return; }
     if (!['lobby', 'matching', 'result'].includes(phase) && oppP() && !list.find(m => m.id === oppP().id)) { finish('host-left'); return; }
-    if (phase === 'lobby' && isHost() && players.length >= 2 && players.every(p => p.ready)) { room.send({ t: 'start' }); beginCountdown(); return; }
+    if (phase === 'lobby' && isHost() && players.length >= 2 && players.every(p => p.ready)) { room.send({ t: 'start', difficulty }); beginCountdown(); return; }
     sync();
   }
   function onMessage(m) {
     if (disposed || !room) return;
-    if (m.t === 'start' && m.from === hostId) { beginCountdown(); return; }
+    if (m.t === 'start' && m.from === hostId) { if (LEVELS[m.difficulty]) difficulty = m.difficulty; beginCountdown(); return; }
     if (m.t === 'ts' && m.from === hostId && !isHost()) {
       const wasTurn = turn, oldLen = chain.length;
       chain = m.chain; options = m.options; turn = m.turn; rally = m.rally; best = Math.max(best, rally); seconds = m.seconds;
@@ -229,6 +241,11 @@ export function start(root, { code: initialCode = null, onLeave = () => {} } = {
   async function handle(ev) {
     if (disposed) return;
     switch (ev.type) {
+      case 'difficulty-change': {
+        if (phase !== 'lobby' && phase !== 'matching' || !LEVELS[ev.difficulty]) return;
+        if (room && !isHost()) { difficulty = ev.difficulty; say({ tone: 'neutral', title: '난이도는 방장이 정해요', message: '방장이 고른 난이도로 시작해요.', icon: 'info' }); return; }
+        difficulty = ev.difficulty; seconds = LV().seconds; sync(); return;
+      }
       case 'mode-change': {
         if (phase !== 'lobby' && phase !== 'matching') return;
         opponent = ev.opponent;

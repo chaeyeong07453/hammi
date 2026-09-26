@@ -54,8 +54,10 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
   } else {
    $('words').innerHTML='';$('courtword').hidden=false;
    const last=current.chain.at(-1)||'';
-   $('courtword').innerHTML=`<span class="gd-turn-pill">${icon(current.turn==='me'?'racket':'clock')} ${current.turn==='me'?'내 차례예요':'상대의 차례예요'}</span><div class="gd-last-word"><span>${current.turn==='me'?'상대가 보낸 단어':'내가 보낸 단어'}</span><strong>${esc(last.slice(0,-1))}<em>${esc(last.slice(-1))}</em></strong>${icon('arrow')}<b>${esc(current.startLetter)}</b></div>`;
-   $('side').innerHTML=`<section class="gd-side-card"><div class="gd-side-title">${icon('racket')}<h2>이어지는 랠리</h2><b class="gd-rally-count">${esc(current.rally)}<small>회</small></b></div><p class="gd-side-sub">한 단어씩, 여기까지 왔어요.</p><ol class="gd-chain">${current.chain.slice(-5).map((word,i,arr)=>`<li class="${i===arr.length-1?'is-latest':''}"><span class="gd-chain-dot"></span><span>${esc(word.slice(0,-1))}<b>${esc(word.slice(-1))}</b></span><small>${i===arr.length-1?'방금 전':i%2?'나':'상대'}</small></li>`).join('')}</ol><div class="gd-next-letter"><span>다음 시작 글자</span><strong>${esc(current.startLetter)}</strong>${icon('arrow')}</div></section><section class="gd-side-card gd-tennis-rules"><h3>${icon('book')} 함께 지키는 약속</h3><p>실제로 있는 낱말만 사용해요.</p><p>한 번 쓴 단어는 다시 쓰지 않아요.</p><p>놓친 공 하나에 생명 하나가 줄어요.</p></section>`;
+   const meanings=current.meanings||{};
+   $('courtword').innerHTML=`<span class="gd-turn-pill">${icon(current.turn==='me'?'racket':'clock')} ${current.turn==='me'?'내 차례예요':'상대의 차례예요'}</span><div class="gd-last-word"><span>${current.turn==='me'?'상대가 보낸 단어':'내가 보낸 단어'}</span><strong>${esc(last.slice(0,-1))}<em>${esc(last.slice(-1))}</em></strong>${icon('arrow')}<b>${esc(current.startLetter)}</b></div>${last&&meanings[last]?`<div class="gd-word-meaning">${icon('book')} ${esc(meanings[last])}</div>`:''}`;
+   $('words').innerHTML=['me','opponent'].map(k=>{const p=current.players.find(x=>k==='me'?x.id==='me':x.id!=='me');return p?`<div class="gd-bear-label gd-bear-${k}" data-target="${k}" style="visibility:hidden">${avatar(p.color,p.name)}<strong>${esc(p.name)}</strong>${k==='me'?'<span class="gd-me-tag">나</span>':''}</div>`:'';}).join('');
+   $('side').innerHTML=`<section class="gd-side-card"><div class="gd-side-title">${icon('racket')}<h2>이어지는 랠리</h2><b class="gd-rally-count">${esc(current.rally)}<small>회</small></b></div><p class="gd-side-sub">한 단어씩, 여기까지 왔어요.</p><ol class="gd-chain">${current.chain.slice(-5).map((word,i,arr)=>`<li class="${i===arr.length-1?'is-latest':''}"><span class="gd-chain-dot"></span><span class="gd-chain-word"><span>${esc(word.slice(0,-1))}<b>${esc(word.slice(-1))}</b></span>${meanings[word]?`<em class="gd-chain-meaning">${esc(meanings[word])}</em>`:''}</span><small>${i===arr.length-1?'방금 전':i%2?'나':'상대'}</small></li>`).join('')}</ol><div class="gd-next-letter"><span>다음 시작 글자</span><strong>${esc(current.startLetter)}</strong>${icon('arrow')}</div></section><section class="gd-side-card gd-tennis-rules"><h3>${icon('book')} 함께 지키는 약속</h3><p>실제로 있는 낱말만 사용해요.</p><p>한 번 쓴 단어는 다시 쓰지 않아요.</p><p>놓친 공 하나에 생명 하나가 줄어요.</p></section>`;
   }
   const feedback=current.feedback;
   $('feedback').hidden=!feedback;
@@ -75,7 +77,7 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
  function renderOverlay() {
   const ov=$('overlay');ov.setAttribute('role','region');ov.setAttribute('aria-label','경기 상태');
   let content='';
-  if(current.phase==='lobby')content=`<div class="gd-overlay-emblem">${icon(c.icon)}</div><span class="gd-eyebrow">함께할 준비 되셨나요?</span><h2>${game==='race'?'우리, 같이 달려요.':'가볍게 한 게임 칠까요?'}</h2><p>${game==='race'?'최대 3명이 같은 도로에서 만나요.':'컴퓨터와 연습하거나 친구와 랠리를 즐겨요.'}</p><div class="gd-lobby-players">${current.players.map(p=>`<div>${avatar(p.color,p.name)}<strong>${esc(p.name)}</strong><span class="${p.ready?'is-ready':''}">${p.ready?'준비 완료':'기다리는 중'}</span></div>`).join('')}</div>${(game==='race'?current.playerCount>1:current.opponent==='friend')?`<div class="gd-room-code"><span>초대 코드</span><strong>${esc(current.roomCode)}</strong><button class="gd-button" data-action="invite">${icon('link')} 초대하기</button></div>`:''}<button class="gd-button gd-primary" data-action="ready">${icon('check')} 준비하고 시작하기</button>`;
+  if(current.phase==='lobby')content=`<div class="gd-overlay-emblem">${icon(c.icon)}</div><span class="gd-eyebrow">함께할 준비 되셨나요?</span><h2>${game==='race'?'우리, 같이 달려요.':'가볍게 한 게임 칠까요?'}</h2><p>${game==='race'?'최대 3명이 같은 도로에서 만나요.':'컴퓨터와 연습하거나 친구와 랠리를 즐겨요.'}</p><div class="gd-lobby-players">${current.players.map(p=>`<div>${avatar(p.color,p.name)}<strong>${esc(p.name)}</strong><span class="${p.ready?'is-ready':''}">${p.ready?'준비 완료':'기다리는 중'}</span></div>`).join('')}</div>${(game==='race'?current.playerCount>1:current.opponent==='friend')?`<div class="gd-room-code"><span>초대 코드</span><strong>${esc(current.roomCode)}</strong><button class="gd-button" data-action="invite">${icon('link')} 초대하기</button></div>`:''}${game==='tennis'?`<div class="gd-difficulty" role="group" aria-label="난이도"><span>낱말 난이도</span><div class="gd-segment">${[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(([v,l])=>`<button type="button" data-action="difficulty" data-value="${v}" class="${(current.difficulty||'normal')===v?'is-selected':''}" aria-pressed="${(current.difficulty||'normal')===v}">${l}</button>`).join('')}</div><p>${{easy:'쉬운 낱말만, 30초. 곰돌 코치가 가끔 놓쳐요.',normal:'친숙한 낱말 위주, 20초.',hard:'사전 낱말, 12초. 곰돌 코치가 잘 쳐요.'}[current.difficulty||'normal']}</p></div>`:''}<button class="gd-button gd-primary" data-action="ready">${icon('check')} 준비하고 시작하기</button>`;
   if(current.phase==='countdown')content=`<span class="gd-eyebrow">손끝을 가볍게 준비해요</span><div class="gd-countdown">${esc(current.countdown ?? 3)}</div><h2>곧 시작해요!</h2><p>${game==='race'?'단어를 보고, 입력하고, Enter.':'끝 글자를 보고, 낱말을 잇고, Enter.'}</p>`;
   if(current.phase==='paused')content=`<div class="gd-overlay-emblem">${icon('pause')}</div><h2>잠깐, 쉬어 가요.</h2><p>손목을 가볍게 풀고<br>준비되면 다시 이어가요.</p><button class="gd-button gd-primary" data-action="resume">${icon('play')} 이어 하기</button><button class="gd-leave" data-action="leave">경기 나가기</button>`;
   if(current.phase==='reconnecting')content=`<div class="gd-overlay-emblem">${icon('users')}</div><h2>다시 만나는 중이에요.</h2><p>연결 상태를 확인하고 있어요.<br>잠시만 기다려 주세요.</p><button class="gd-button" data-action="reconnect">다시 연결하기 ${icon('reset')}</button>`;
@@ -85,6 +87,10 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
   ov.innerHTML=`<div class="gd-overlay-card">${content}</div>`;
  }
  function placeWords(anchors) {
+  if(game==='tennis') {
+   anchors.forEach(a=>{const el=$('words').querySelector(`[data-target="${a.id}"]`);if(!el)return;el.style.left=a.x+'px';el.style.top=a.y+'px';el.style.visibility=a.visible?'visible':'hidden';});
+   return;
+  }
   const placed=[],width=$('stage').clientWidth;
   const elements=new Map([...$('words').children].map(el=>[el.dataset.target,el]));
   // Keep the actual words in HTML, readable at every distance. Stagger nearby labels.
@@ -110,6 +116,7 @@ export function mountGame(root, { game='race', state, onEvent=()=>{} } = {}) {
   if(action==='fullscreen') {try {if(document.fullscreenElement)await document.exitFullscreen();else await root.querySelector('.gd-arena').requestFullscreen();}catch{emit('fullscreen-unavailable');}return;}
   if(action==='help') {emit('help');return;}
   if(action==='mode') {emit('mode-change',game==='race'?{playerCount:Number(b.dataset.value)}:{opponent:b.dataset.value});return;}
+  if(action==='difficulty') {emit('difficulty-change',{difficulty:b.dataset.value});return;}
   emit(action);
  },options);
  $('input').addEventListener('compositionstart',()=>{composing=true;},options);
