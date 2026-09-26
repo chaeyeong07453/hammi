@@ -165,12 +165,16 @@
       while (lines.length && !lines[lines.length - 1]) lines.pop();
       return lines;
     },
-    parse(row) { return { id: 's' + row.id, dbId: row.id, title: (row.title || '').trim() || '제목 없음', author: (row.author || '').trim(), writer: (row.writer || '').trim(), lines: this.splitLines(row.body || ''), shared: true, created: row.created_at }; },
+    parse(row) { return { id: 's' + row.id, dbId: row.id, title: (row.title || '').trim() || '제목 없음', author: (row.author || '').trim(), writer: (row.writer || '').trim(), owner: (row.owner || '').trim(), body: (row.body || '').replace(/\r/g, ''), lines: this.splitLines(row.body || ''), shared: true, created: row.created_at }; },
+    me() { const u = window.Auth && Auth.current(); return u && u.id ? { id: u.id, token: u.token || '' } : null; },
+    isOwner(t) { const u = this.me(); return !!(u && t.owner && t.owner === u.id); },
     cached() { try { return JSON.parse(localStorage.getItem(this.cacheKey)); } catch (e) { return null; } },
     async load(force) {
       const c = this.cached();
       if (!force && c && Date.now() - c.at < this.ttl) return c.list;
-      const res = await fetch(`${this.url}/shared_texts?select=id,title,author,body,writer,created_at&order=created_at.desc&limit=200`, { headers: this.headers() });
+      let res = await fetch(`${this.url}/shared_texts?select=id,title,author,body,writer,owner,created_at&order=created_at.desc&limit=200`, { headers: this.headers() });
+      // owner 열이 아직 없는 서버(SQL v2 미적용)면 예전 열만으로 다시 읽음
+      if (res.status === 400) res = await fetch(`${this.url}/shared_texts?select=id,title,author,body,writer,created_at&order=created_at.desc&limit=200`, { headers: this.headers() });
       if (!res.ok) { if (c) return c.list; throw new Error('load failed ' + res.status); }
       const list = (await res.json()).map(r => this.parse(r)).filter(t => t.lines.some(l => l));
       localStorage.setItem(this.cacheKey, JSON.stringify({ at: Date.now(), list }));
@@ -183,65 +187,117 @@
       return (await this.load(true)).find(t => t.id === id) || null;
     },
     async add(title, author, body, pin, writer) {
-      const res = await fetch(`${this.url}/shared_texts`, { method: 'POST', headers: this.headers({ Prefer: 'return=representation' }),
-        body: JSON.stringify({ title: title.trim() || '제목 없음', author: author.trim(), body: body.replace(/\r/g, ''), pin: this.hash(pin), writer: (writer || '').trim() }) });
+      const u = this.me();
+      const payload = { title: title.trim() || '제목 없음', author: author.trim(), body: body.replace(/\r/g, ''), pin: pin ? this.hash(pin) : '', writer: (writer || '').trim() };
+      if (u) payload.owner = u.id;
+      let res = await fetch(`${this.url}/shared_texts`, { method: 'POST', headers: this.headers({ Prefer: 'return=representation' }), body: JSON.stringify(payload) });
+      if (res.status === 400 && payload.owner) { delete payload.owner; res = await fetch(`${this.url}/shared_texts`, { method: 'POST', headers: this.headers({ Prefer: 'return=representation' }), body: JSON.stringify(payload) }); }
       if (!res.ok) throw new Error('add failed ' + res.status);
       const row = (await res.json())[0];
       localStorage.removeItem(this.cacheKey);
       return this.parse(row);
     },
+    // 권한 인자: 내 계정(토큰) 또는 비밀번호. pin이 비면 계정으로만
+    authArgs(pin) { const u = this.me(); return { p_pin: pin ? this.hash(pin) : '', p_owner: u ? u.id : '', p_token: u ? u.token : '' }; },
+    async rpc(name, args) { return fetch(`${this.url}/rpc/${name}`, { method: 'POST', headers: this.headers(), body: JSON.stringify(args) }); },
     async remove(dbId, pin) {
-      const res = await fetch(`${this.url}/rpc/delete_shared_text`, { method: 'POST', headers: this.headers(), body: JSON.stringify({ p_id: dbId, p_pin: this.hash(pin) }) });
+      let res = await this.rpc('shared_text_delete', { p_id: dbId, ...this.authArgs(pin) });
+      // 서버에 새 함수가 아직 없으면 예전 방식(비밀번호만)으로
+      if (res.status === 404) { if (!pin) return false; res = await this.rpc('delete_shared_text', { p_id: dbId, p_pin: this.hash(pin) }); }
       if (!res.ok) throw new Error('remove failed ' + res.status);
+      const ok = (await res.json()) === true;
+      if (ok) localStorage.removeItem(this.cacheKey);
+      return ok;
+    },
+    async update(dbId, pin, title, author, body) {
+      const res = await this.rpc('shared_text_update', { p_id: dbId, ...this.authArgs(pin), p_title: title.trim() || '제목 없음', p_author: author.trim(), p_body: body.replace(/\r/g, '') });
+      if (res.status === 404) throw new Error('not-ready');
+      if (!res.ok) throw new Error('update failed ' + res.status);
       const ok = (await res.json()) === true;
       if (ok) localStorage.removeItem(this.cacheKey);
       return ok;
     }
   };
 
-  // 내 글 입력 화면
-  function customEditor(app) {
-    header(app, '내 글로 연습하기', '좋아하는 노래 가사나 시를 넣어 두고 연습해요.', '글 고르기');
+  // 내 글 입력 화면 (editing: 고칠 공유 글이면 그 글)
+  function customEditor(app, editing) {
+    const me = sharedTexts.me();
+    const owner = editing && sharedTexts.isOwner(editing);
+    header(app, editing ? '공유한 글 고치기' : '내 글로 연습하기', editing ? '고친 내용은 모든 사람의 목록에 바로 반영돼요.' : '좋아하는 노래 가사나 시를 넣어 두고 연습해요.', '글 고르기');
     $('.practice-head a', app).href = '#/long';
     const card = el('div', 'card');
+    const pinLabel = editing
+      ? (owner ? '비밀번호 (내가 올린 글이라 넣지 않아도 돼요)' : '올릴 때 정한 비밀번호 (숫자 4자리)')
+      : (me ? '지우기 비밀번호 (숫자 4자리, 로그인 중이라 넣지 않아도 돼요)' : '지우기 비밀번호 (숫자 4자리, 모두에게 공유할 때만)');
     card.innerHTML = `
       <div class="form-row"><label for="my-title">제목</label><input class="text-input" id="my-title" type="text" maxlength="40" placeholder="예) 고향의 봄"></div>
       <div class="form-row"><label for="my-author">지은이 (없어도 돼요)</label><input class="text-input" id="my-author" type="text" maxlength="30" placeholder="예) 이원수"></div>
       <div class="form-row"><label for="my-body">내용</label><textarea class="text-input" id="my-body" rows="10" placeholder="여기에 가사나 시를 붙여 넣으세요.\n한 줄씩 따라 치게 됩니다. 빈 줄은 그대로 두어도 괜찮아요."></textarea></div>
       <p class="muted" id="my-count">0줄</p>
-      <div class="form-row"><label for="my-pin">지우기 비밀번호 (숫자 4자리, 모두에게 공유할 때만)</label><input class="text-input pin" id="my-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
+      <div class="form-row"><label for="my-pin">${pinLabel}</label><input class="text-input pin" id="my-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"></div>
       <div class="form-msg" id="my-msg"></div>
-      <div class="btn-row"><button class="btn big" id="my-save">이 컴퓨터에만 저장</button><button class="btn big accent" id="my-share">모두에게 공유하기</button><a class="btn big secondary" href="#/long">취소</a></div>
-      <div class="tips">붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. <b>이 컴퓨터에만 저장</b>은 나만 보고, <b>모두에게 공유하기</b>는 이 사이트에 들어오는 모든 사람의 긴 글 연습 목록에 바로 올라가요. 공유한 글은 올릴 때 정한 비밀번호 4자리로 지울 수 있어요.</div>`;
+      <div class="btn-row">${editing
+        ? `<button class="btn big accent" id="my-update">고친 내용 저장</button><a class="btn big secondary" href="#/long">취소</a>`
+        : `<button class="btn big" id="my-save">이 컴퓨터에만 저장</button><button class="btn big accent" id="my-share">모두에게 공유하기</button><a class="btn big secondary" href="#/long">취소</a>`}</div>
+      <div class="tips">${editing
+        ? '고친 글은 저장하는 순간 모든 사람에게 새 내용으로 보여요. 목록에서 다시 고치거나 지울 수도 있어요.'
+        : `붙여 넣기는 <b>Ctrl + V</b> (맥은 <b>⌘ + V</b>)예요. <b>이 컴퓨터에만 저장</b>은 나만 보고, <b>모두에게 공유하기</b>는 이 사이트에 들어오는 모든 사람의 긴 글 연습 목록에 바로 올라가요. ${me ? '로그인한 채로 올린 글은 나중에 내 계정으로 언제든 고치거나 지울 수 있어요. 비밀번호는 다른 컴퓨터에서 로그인 없이 지우고 싶을 때만 필요해요.' : '공유한 글은 올릴 때 정한 비밀번호 4자리로 고치거나 지울 수 있어요.'}`}</div>`;
     app.appendChild(card);
     const body = $('#my-body');
-    body.addEventListener('input', () => { $('#my-count').textContent = body.value.split('\n').filter(l => l.trim()).length + '줄'; });
-    $('#my-save').onclick = () => {
-      if (!body.value.trim()) { body.focus(); body.classList.add('bad'); setTimeout(() => body.classList.remove('bad'), 800); return; }
-      const t = myTexts.add($('#my-title').value, $('#my-author').value, body.value);
-      location.hash = '#/long/' + t.id;
-    };
+    const countLines = () => { $('#my-count').textContent = body.value.split('\n').filter(l => l.trim()).length + '줄'; };
+    body.addEventListener('input', countLines);
+    if (editing) { $('#my-title').value = editing.title; $('#my-author').value = editing.author; body.value = editing.body != null ? editing.body : editing.lines.join('\n'); countLines(); }
     const pinEl = $('#my-pin');
     pinEl.addEventListener('input', () => { pinEl.value = pinEl.value.replace(/\D/g, '').slice(0, 4); });
     const msg = t => { $('#my-msg').textContent = t; };
-    $('#my-share').onclick = async () => {
-      if (!body.value.trim()) { body.focus(); body.classList.add('bad'); setTimeout(() => body.classList.remove('bad'), 800); return msg('내용을 넣어 주세요.'); }
-      if (!/^\d{4}$/.test(pinEl.value)) { pinEl.focus(); return msg('지우기 비밀번호를 숫자 4자리로 넣어 주세요.'); }
-      const btn = $('#my-share'); btn.disabled = true; btn.textContent = '올리는 중…'; msg('');
-      try {
-        const u = window.Auth && Auth.current();
-        const t = await sharedTexts.add($('#my-title').value, $('#my-author').value, body.value, pinEl.value, u ? u.id : '');
+    const shake = () => { body.focus(); body.classList.add('bad'); setTimeout(() => body.classList.remove('bad'), 800); };
+    if (!editing) {
+      $('#my-save').onclick = () => {
+        if (!body.value.trim()) { shake(); return; }
+        const t = myTexts.add($('#my-title').value, $('#my-author').value, body.value);
         location.hash = '#/long/' + t.id;
-      } catch (e) {
-        btn.disabled = false; btn.textContent = '모두에게 공유하기';
-        msg('지금은 올릴 수 없어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
-      }
-    };
+      };
+      $('#my-share').onclick = async () => {
+        if (!body.value.trim()) { shake(); return msg('내용을 넣어 주세요.'); }
+        if (pinEl.value && !/^\d{4}$/.test(pinEl.value)) { pinEl.focus(); return msg('비밀번호는 숫자 4자리예요.'); }
+        if (!me && !pinEl.value) { pinEl.focus(); return msg('지우기 비밀번호를 숫자 4자리로 넣어 주세요. (로그인하면 없어도 돼요)'); }
+        const btn = $('#my-share'); btn.disabled = true; btn.textContent = '올리는 중…'; msg('');
+        try {
+          const t = await sharedTexts.add($('#my-title').value, $('#my-author').value, body.value, pinEl.value, me ? me.id : '');
+          location.hash = '#/long/' + t.id;
+        } catch (e) {
+          btn.disabled = false; btn.textContent = '모두에게 공유하기';
+          msg('지금은 올릴 수 없어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+        }
+      };
+    } else {
+      $('#my-update').onclick = async () => {
+        if (!body.value.trim()) { shake(); return msg('내용을 넣어 주세요.'); }
+        if (!owner && !/^\d{4}$/.test(pinEl.value)) { pinEl.focus(); return msg('올릴 때 정한 비밀번호 4자리를 넣어 주세요.'); }
+        const btn = $('#my-update'); btn.disabled = true; btn.textContent = '저장하는 중…'; msg('');
+        try {
+          const ok = await sharedTexts.update(editing.dbId, pinEl.value, $('#my-title').value, $('#my-author').value, body.value);
+          if (ok) { location.hash = '#/long/' + editing.id; return; }
+          msg(owner ? '이 글을 고칠 권한이 없어요. 다시 로그인하거나 비밀번호를 넣어 주세요.' : '비밀번호가 달라요. 다시 넣어 주세요.');
+        } catch (e) {
+          msg(e.message === 'not-ready' ? '지금은 서버가 준비되지 않아 고칠 수 없어요. 잠시 뒤 다시 해 주세요.' : '지금은 저장할 수 없어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');
+        }
+        btn.disabled = false; btn.textContent = '고친 내용 저장';
+      };
+    }
     $('#my-title').focus();
   }
 
   route('long', (app, rest) => {
     if (rest[0] === 'new') return customEditor(app);
+    if (rest[0] === 'edit' && /^s\d+$/.test(rest[1] || '')) {
+      header(app, '공유한 글 고치기', '', '글 고르기'); $('.practice-head a', app).href = '#/long';
+      app.insertAdjacentHTML('beforeend', '<div class="card center muted" id="loading">글을 불러오는 중이에요…</div>');
+      let alive = true;
+      sharedTexts.find(rest[1]).then(t => { if (!alive) return; if (t) { app.innerHTML = ''; customEditor(app, t); } else $('#loading').textContent = '이 글을 찾을 수 없어요. 지워졌을 수 있어요.'; })
+        .catch(() => { if (alive) $('#loading').textContent = '인터넷 연결을 확인해 주세요.'; });
+      return () => { alive = false; };
+    }
     // 공유 글은 불러온 뒤 같은 화면을 다시 그림
     if (/^s\d+$/.test(rest[0] || '') && !(sharedTexts.cached() || { list: [] }).list.some(t => t.id === rest[0])) {
       header(app, '📖 긴 글 연습', '', '글 고르기'); $('.practice-head a', app).href = '#/long';
@@ -281,15 +337,21 @@
         list.forEach(t => {
           const o = item(t); const b = el('button', o.cls + ' shared'); b.innerHTML = o.html; b.onclick = () => { location.hash = o.href; };
           if (t.writer) b.querySelector('.a').textContent += (t.author ? ' · ' : '') + t.writer + '님이 올림';
-          const del = el('span', 'del', '🗑 지우기'); del.title = '이 글 지우기 (올릴 때 정한 비밀번호 필요)';
+          const owner = sharedTexts.isOwner(t);
+          if (owner) b.classList.add('mine');
+          const acts = el('span', 'acts');
+          const edit = el('span', 'del edit', '✏️ 고치기'); edit.title = owner ? '내가 올린 글 고치기' : '이 글 고치기 (올릴 때 정한 비밀번호 필요)';
+          edit.onclick = ev => { ev.stopPropagation(); location.hash = '#/long/edit/' + t.id; };
+          const del = el('span', 'del', '🗑 지우기'); del.title = owner ? '내가 올린 글 지우기' : '이 글 지우기 (올릴 때 정한 비밀번호 필요)';
           del.onclick = async ev => {
             ev.stopPropagation();
-            const pin = prompt(`「${t.title}」을(를) 지우려면 올릴 때 정한 비밀번호 4자리를 넣어 주세요.`);
-            if (pin == null) return;
-            try { if (await sharedTexts.remove(t.dbId, pin.trim())) { b.remove(); if (!sl.querySelector('.text-btn')) sl.innerHTML = '<div class="muted">아직 공유된 글이 없어요.</div>'; } else alert('비밀번호가 달라요.'); }
+            let pin = '';
+            if (owner) { if (!confirm(`내가 올린 「${t.title}」을(를) 지울까요?`)) return; }
+            else { pin = prompt(`「${t.title}」을(를) 지우려면 올릴 때 정한 비밀번호 4자리를 넣어 주세요.`); if (pin == null) return; pin = pin.trim(); }
+            try { if (await sharedTexts.remove(t.dbId, pin)) { b.remove(); if (!sl.querySelector('.text-btn')) sl.innerHTML = '<div class="muted">아직 공유된 글이 없어요.</div>'; } else alert(owner ? '지울 권한이 없어요. 다시 로그인해 주세요.' : '비밀번호가 달라요.'); }
             catch (e) { alert('지금은 지울 수 없어요. 인터넷 연결을 확인해 주세요.'); }
           };
-          b.appendChild(del); sl.appendChild(b);
+          acts.appendChild(edit); acts.appendChild(del); b.appendChild(acts); sl.appendChild(b);
         });
       }).catch(() => { if (alive) $('#shared-list', sh).innerHTML = '<div class="muted">지금은 불러올 수 없어요. 인터넷 연결을 확인해 주세요.</div>'; });
       const card = el('div', 'card');
