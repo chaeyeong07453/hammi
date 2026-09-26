@@ -52,22 +52,37 @@ export async function check(word, options, used) {
   return { ok: false, reason: 'unknown' };
 }
 
-/** 컴퓨터가 낼 낱말. 친숙한 낱말을 먼저, 없으면 사전에서 2~3글자 낱말 */
-export async function pick(options, used) {
+/** 컴퓨터가 낼 낱말. level: 'easy' 친숙한 짧은 낱말만 / 'normal' 친숙한 낱말 우선 / 'hard' 사전 낱말 우선 */
+export async function pick(options, used, level = 'normal') {
   const usedSet = new Set(used || []);
   const fits = w => (!options || options.includes(w[0])) && !usedSet.has(w);
-  const easy = curatedList().filter(w => fits(w) && w.length <= 4);
-  if (easy.length) return easy[Math.floor(Math.random() * easy.length)];
+  const maxLen = level === 'easy' ? 3 : 4;
+  const easy = curatedList().filter(w => fits(w) && w.length <= maxLen);
+  if (easy.length && (level !== 'hard' || Math.random() < .25)) return easy[Math.floor(Math.random() * easy.length)];
+  if (level === 'easy') return null;
   const opts = options || [];
   for (const o of opts.slice().sort(() => Math.random() - .5)) {
     try {
       const set = await shard(o);
       const cand = [];
-      for (const w of set) if (w[0] === o && w.length <= 3 && !usedSet.has(w)) { cand.push(w); if (cand.length > 400) break; }
+      for (const w of set) if (w[0] === o && w.length <= (level === 'hard' ? 4 : 3) && !usedSet.has(w)) { cand.push(w); if (cand.length > 600) break; }
       if (cand.length) return cand[Math.floor(Math.random() * cand.length)];
     } catch (e) { /* 다음 후보 */ }
   }
-  return null;
+  return easy.length ? easy[Math.floor(Math.random() * easy.length)] : null;
+}
+
+/** 낱말 뜻풀이 (data/mean/{초성}.json, 필요한 조각만 불러와 캐시) */
+const MEAN_BASE = new URL('../../data/mean/', import.meta.url);
+const meanCache = new Map();
+export async function meaning(word) {
+  if (!isHangulWord(word)) return null;
+  const i = choIndex(word[0]);
+  if (!meanCache.has(i)) {
+    meanCache.set(i, fetch(new URL(i + '.json', MEAN_BASE)).then(r => { if (!r.ok) throw new Error('mean ' + r.status); return r.json(); })
+      .catch(e => { meanCache.delete(i); throw e; }));
+  }
+  try { const m = await meanCache.get(i); return m[word] || null; } catch (e) { return null; }
 }
 
 /** 처음 공으로 던질 낱말 */

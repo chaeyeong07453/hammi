@@ -76,7 +76,7 @@ export class GameScene {
     } else {
       this.players = [prepare(this.prototype.clone(true), COLORS[0]), prepare(this.prototype.clone(true), COLORS[2])];
       this.players[0].position.set(-1.8, .15, 5.9); this.players[0].rotation.y = -.22;
-      this.players[1].position.set(1.4, .15, -6); this.players[1].rotation.y = .2;
+      this.players[1].position.set(1.4, .15, -6); this.players[1].rotation.y = Math.PI + .2; // 건너편 곰은 이쪽을 바라본다
       this.players.forEach(p => { p.scale.setScalar(1.6); this.scene.add(p); });
       this.ball = prepare(assets[2].scene); this.ball.scale.setScalar(1.4); this.ball.position.set(0, 2.3, 2); this.scene.add(this.ball);
       const ring = new THREE.Mesh(new THREE.RingGeometry(.26, .38, 40), new THREE.MeshBasicMaterial({ color: '#9380b7', transparent: true, opacity: .28, side: THREE.DoubleSide }));
@@ -146,6 +146,8 @@ export class GameScene {
       }
       this.ball.rotation.x = this.time; this.ballShadow.position.set(this.ball.position.x, .18, this.ball.position.z);
       this.players.forEach((p, i) => { p.position.y = .15 + Math.sin(this.time * 2 + i) * .025; });
+      // 곰 머리 위 이름표 위치 (0: 가까운 곰 = 나, 1: 건너편 곰 = 상대)
+      this.onAnchors(this.players.map((p, i) => ({ id: i === 0 ? 'me' : 'opponent', ...this.project(p.position.clone().add(new THREE.Vector3(0, 4.4, 0))) })));
     }
     this.effects = this.effects.filter(effect => {
       const t = (now - effect.start) / 750;

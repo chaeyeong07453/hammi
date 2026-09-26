@@ -177,3 +177,18 @@
 /* Lobby actions remain visible without scrolling inside the 3D stage. */
 .game-design[data-phase="lobby"] .gd-stage{height:570px;}
 @media(max-width:600px){.game-design[data-phase="lobby"] .gd-stage{height:570px;}.game-design[data-phase="result"] .gd-stage{height:480px;}}
+
+/* 테니스: 뜻풀이, 곰 이름표, 난이도 */
+.gd-word-meaning {margin-top:8px;max-width:300px;padding:8px 12px;background:#fffffff2;border:1px solid #fff;border-radius:11px;font-size:13px;line-height:1.45;color:#5a4d6b;box-shadow:0 4px 14px #59417914;display:flex;gap:6px;align-items:flex-start;}
+.gd-word-meaning .gd-icon {width:15px;flex-shrink:0;margin-top:2px;color:#a493b7;}
+.gd-chain-word {display:flex;flex-direction:column;gap:2px;min-width:0;}
+.gd-chain-meaning {font-style:normal;font-weight:400;font-size:12px;line-height:1.35;color:#7a6c8a;}
+.gd-chain li.is-latest .gd-chain-meaning {color:#6d5a86;}
+.gd-bear-label {position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;gap:6px;padding:5px 12px 5px 6px;background:#fffffff2;border:2px solid #fff;border-radius:999px;box-shadow:0 6px 16px #59417922;font-size:14px;font-weight:750;white-space:nowrap;pointer-events:none;z-index:2;}
+.gd-bear-label .gd-avatar {width:24px;height:24px;}
+.gd-bear-label.gd-bear-me {border-color:#b9a7f9;background:#f4effff5;}
+.gd-bear-label .gd-me-tag {margin-left:2px;}
+.gd-difficulty {display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 14px;}
+.gd-difficulty>span {font-size:13px;color:#72627f;font-weight:600;}
+.gd-difficulty>p {margin:0;font-size:13px;color:#72627f;}
+@media(max-width:600px){.gd-word-meaning{max-width:220px;font-size:12px;}.gd-bear-label{font-size:12px;padding:4px 9px 4px 5px;}.gd-bear-label .gd-avatar{width:20px;height:20px;}}
